@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Locality-Aware Task Scheduling Presentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #475569;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #111827;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 16:9 Widescreen Canvas at 1600x900 for optimal presentation scaling */
+  .slide {
+    width: 1600px;
+    height: 900px;
+    background-color: #F4F0EA;
+    background-image: 
+      linear-gradient(to right, #E4DFD6 1.5px, transparent 1.5px),
+      linear-gradient(to bottom, #E4DFD6 1.5px, transparent 1.5px);
+    background-size: 40px 40px;
+    position: relative;
+    padding: 44px 68px 36px 68px;
+    margin: 30px auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+
+  @media print {
+    @page {
+      size: 1600px 900px;
+      margin: 0;
+    }
+    body { background: transparent; margin: 0; }
+    .slide {
+      margin: 0;
+      box-shadow: none;
+      page-break-after: always;
+      page-break-inside: avoid;
+    }
+  }
+
+  /* Neo-brutalist Badges */
+  .badge-row { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+  .badge-dark {
+    background: #111827;
+    color: #FFFFFF;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 5px 16px;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+  }
+  .badge-outline {
+    background: #FFFFFF;
+    color: #111827;
+    border: 2px solid #111827;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 4px 16px;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+  }
+  .pill {
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 2px solid #111827;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pill-white { background: #FFFFFF; color: #111827; }
+  .pill-blue { background: #DCE4FF; color: #111827; }
+  .pill-peach { background: #FFE5D9; color: #111827; }
+  .pill-green { background: #DCFCE7; color: #065F46; }
+  .pill-yellow { background: #FFD147; color: #111827; }
+
+  /* Titles */
+  .slide-title-wrap { margin-bottom: 18px; }
+  .slide-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 44px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.15;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .highlight-box {
+    background: #FFD147;
+    border: 2.5px solid #111827;
+    border-radius: 12px;
+    padding: 2px 16px;
+    display: inline-block;
+    box-shadow: 4px 4px 0px #111827;
+    color: #111827;
+  }
+  .slide-subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15.5px;
+    color: #4B5563;
+    margin-top: 6px;
+  }
+
+  /* Neo-brutalist Cards */
+  .card {
+    background: #FFFFFF;
+    border: 2.5px solid #111827;
+    border-radius: 16px;
+    box-shadow: 5px 5px 0px #111827;
+    padding: 22px 26px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .card-blue { background: #EEF2FF; }
+  .card-peach { background: #FFF1EB; }
+  .card-green { background: #F0FDF4; }
+  .card-dark { background: #0F172A; color: #FFFFFF; }
+
+  .card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 12px;
+  }
+  .card-dark .card-title { color: #FFD147; }
+
+  /* Callout Banner */
+  .callout-banner {
+    background: #FFD147;
+    border: 2.5px solid #111827;
+    border-radius: 12px;
+    box-shadow: 4px 4px 0px #111827;
+    padding: 12px 24px;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #111827;
+    margin-top: auto;
+    margin-bottom: 14px;
+  }
+  .callout-banner strong { font-family: 'Space Grotesk', sans-serif; font-size: 17px; }
+
+  /* Footer */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: #4B5563;
+    padding-top: 12px;
+    border-top: 1.5px solid #E2DDD4;
+    margin-top: auto;
+  }
+
+  /* Code / Telemetry Blocks */
+  .code-box {
+    background: #0F172A;
+    border: 2px solid #111827;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: #F8FAFC;
+    box-shadow: 3px 3px 0px #111827;
+  }
+  .code-box .comment { color: #94A3B8; }
+  .code-box .highlight { color: #FFD147; font-weight: bold; }
+  .code-box .warn { color: #F87171; font-weight: bold; }
+  .code-box .cyan { color: #38BDF8; font-weight: bold; }
+
+  /* Grid Layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; flex: 1; margin-bottom: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 22px; flex: 1; margin-bottom: 14px; }
+  .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 18px; flex: 1; margin-bottom: 14px; }
+
+  ul.spec-list { list-style: none; display: flex; flex-direction: column; gap: 9px; font-size: 15.5px; line-height: 1.42; color: #374151; }
+  ul.spec-list li strong { color: #111827; }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: HERO / TITLE SLIDE -->
+<div class="slide">
+  <div class="badge-row">
+    <span class="badge-dark">HPC SYSTEMS</span>
+    <span class="badge-outline">RESEARCH REPRODUCTION & EXTENSION</span>
+  </div>
+
+  <div style="display: flex; gap: 36px; flex: 1; align-items: stretch; margin-bottom: 14px;">
+    <!-- Left Hero Info -->
+    <div style="flex: 1.1; display: flex; flex-direction: column; justify-content: flex-start; gap: 16px;">
+      <div>
+        <h1 style="font-family: 'Space Grotesk', sans-serif; font-size: 56px; font-weight: 700; line-height: 1.1; margin-bottom: 12px;">
+          Locality-Aware<br>Task Scheduling<br>
+          <span class="highlight-box" style="font-size: 44px; margin-top: 6px;">on Heterogeneous HPC</span>
+        </h1>
+
+        <div style="display: flex; gap: 10px; margin: 12px 0 12px 0;">
+          <span class="pill pill-white">AMD Opteron 8-Node NUMA</span>
+          <span class="pill pill-blue">TILEPro64 8×8 Mesh</span>
+          <span class="pill pill-peach">NOVA Co-Scheduler</span>
+        </div>
+
+        <p style="font-size: 17px; line-height: 1.5; color: #374151; margin-bottom: 0;">
+          An empirical reproduction of Muddukrishna et al. (Scientific Programming 2015), uncovering the <strong>SparseLU locality paradox (+15.1% slowdown)</strong>, and delivering the <strong>NOVA co-scheduling architecture</strong> for multi-socket servers and 2D mesh manycores.
+        </p>
+      </div>
+
+      <!-- Core Research Finding Callout (Anchors middle, eliminates empty gap) -->
+      <div style="background: #FFF1EB; border: 2px solid #111827; border-radius: 10px; padding: 12px 16px; box-shadow: 3px 3px 0px #111827;">
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: #111827;">Core Empirical Question &amp; Finding:</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #374151; margin-top: 4px; line-height: 1.45;">
+          Does prioritizing memory locality always improve parallel speedup? <strong>No:</strong> On irregular task DAGs (SparseLU), core load balance dominates locality by 1.6×.
+        </div>
+      </div>
+
+      <!-- Scope & Key Deliverables (2x2 Grid) -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div style="background: #FFFFFF; border: 2px solid #111827; border-radius: 10px; padding: 12px 14px; box-shadow: 3px 3px 0px #111827;">
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15.5px; font-weight: 700; color: #111827;">100 NUMA Runs</div>
+          <div style="font-size: 12.5px; color: #4B5563; font-family: 'JetBrains Mono', monospace; margin-top: 4px; line-height: 1.35;">100% verification of Fig. 7 across 5 benchmark kernels on 48 cores</div>
+        </div>
+        <div style="background: #FFFFFF; border: 2px solid #111827; border-radius: 10px; padding: 12px 14px; box-shadow: 3px 3px 0px #111827;">
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15.5px; font-weight: 700; color: #111827;">64-Tile Mesh Simulator</div>
+          <div style="font-size: 12.5px; color: #4B5563; font-family: 'JetBrains Mono', monospace; margin-top: 4px; line-height: 1.35;">Cycle-accurate 2D Manhattan latency model (11/11 tests pass)</div>
+        </div>
+        <div style="background: #FFFFFF; border: 2px solid #111827; border-radius: 10px; padding: 12px 14px; box-shadow: 3px 3px 0px #111827;">
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15.5px; font-weight: 700; color: #B91C1C;">SparseLU Paradox Discovered</div>
+          <div style="font-size: 12.5px; color: #4B5563; font-family: 'JetBrains Mono', monospace; margin-top: 4px; line-height: 1.35;">+15.1% slowdown under naive locality dealing proven empirically</div>
+        </div>
+        <div style="background: #FFFFFF; border: 2px solid #111827; border-radius: 10px; padding: 12px 14px; box-shadow: 3px 3px 0px #111827;">
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15.5px; font-weight: 700; color: #047857;">NOVA Co-Scheduler</div>
+          <div style="font-size: 12.5px; color: #4B5563; font-family: 'JetBrains Mono', monospace; margin-top: 4px; line-height: 1.35;">Adaptive co-scheduling combining affinity with queue load balance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Hero Visual Diagram (Tightly packed, zero blank space) -->
+    <div class="card" style="flex: 0.9; padding: 22px 24px; display: flex; flex-direction: column; justify-content: flex-start; gap: 14px;">
+      <div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 2px;">Dual-Architecture Latency Cliffs</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #4B5563;">Empirical memory hierarchies &amp; interconnect penalty profiles</div>
+      </div>
+
+      <!-- Architectural comparison blocks -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <!-- NUMA Block -->
+        <div class="card card-blue" style="padding: 16px 18px; box-shadow: 3px 3px 0px #111827; gap: 10px;">
+          <div>
+            <div style="font-weight: 700; font-size: 16px;">AMD Opteron (NUMA)</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #4B5563;">8 Sockets · 48 Cores</div>
+          </div>
+          <div style="background: #FFFFFF; border: 1.5px solid #111827; border-radius: 6px; padding: 8px 12px;">
+            <div style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #4B5563;">Local Node DRAM Access:</div>
+            <div style="font-size: 20px; font-weight: 800; color: #047857;">~40 cycles <span style="font-size: 12px; font-weight: 500; color: #4B5563;">(1.0× baseline)</span></div>
+          </div>
+          <div style="background: #FEE2E2; border: 1.5px solid #111827; border-radius: 6px; padding: 8px 12px;">
+            <div style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #991B1B;">Cross-Socket HT Bus:</div>
+            <div style="font-size: 20px; font-weight: 800; color: #B91C1C;">240–340 cycles</div>
+            <div style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #B91C1C; font-weight: 700;">6.0×–8.5× Latency Cliff</div>
+          </div>
+          <ul style="list-style: none; padding: 0; margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #374151; line-height: 1.45; display: flex; flex-direction: column; gap: 4px;">
+            <li>• HyperTransport 3.0 (6.4 GT/s per link)</li>
+            <li>• Coherent CC-NUMA cache protocol</li>
+            <li>• Max distance: 3 hops between sockets</li>
+            <li>• Failure: Bus saturation on naive steals</li>
+          </ul>
+        </div>
+
+        <!-- TILEPro64 Block -->
+        <div class="card card-peach" style="padding: 16px 18px; box-shadow: 3px 3px 0px #111827; gap: 10px;">
+          <div>
+            <div style="font-weight: 700; font-size: 16px;">TILEPro64 (Mesh)</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #4B5563;">8×8 Grid · 64 Cores</div>
+          </div>
+          <div style="background: #FFFFFF; border: 1.5px solid #111827; border-radius: 6px; padding: 8px 12px;">
+            <div style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #4B5563;">Local Tile L2 Bank:</div>
+            <div style="font-size: 20px; font-weight: 800; color: #047857;">10 cycles <span style="font-size: 12px; font-weight: 500; color: #4B5563;">(1.0× baseline)</span></div>
+          </div>
+          <div style="background: #FEE2E2; border: 1.5px solid #111827; border-radius: 6px; padding: 8px 12px;">
+            <div style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #991B1B;">Remote Mesh Manhattan Hop:</div>
+            <div style="font-size: 20px; font-weight: 800; color: #B91C1C;">38 + 2·h cycles</div>
+            <div style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #B91C1C; font-weight: 700;">Up to 14 hops = 66 cyc (6.6× cliff)</div>
+          </div>
+          <ul style="list-style: none; padding: 0; margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #374151; line-height: 1.45; display: flex; flex-direction: column; gap: 4px;">
+            <li>• 2D dynamic packet-switched NoC</li>
+            <li>• 3 networks: UDI (user), IDN, MDN</li>
+            <li>• Distributed shared L2 cache homing</li>
+            <li>• Failure: Center bisection contention</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Telemetry Code Box (Completely fills bottom, zero gap) -->
+      <div class="code-box" style="padding: 14px 18px; font-size: 12.5px; line-height: 1.5;">
+        <span class="comment">// The Locality vs Load Balance Fundamental Conflict:</span><br>
+        <span class="highlight">cost(Task, Target) = Σ (Footprint[i] / LineSize) × Latency(Target, i)</span><br>
+        <span class="cyan">• Pure Locality Dealing:</span> Cuts comm stalls by up to 80% (Map: 6.67M → 1.31M cyc)<br>
+        <span>• Naive Work-Stealing:</span> Wipes out cache affinity with 4×–6× bus penalty<br>
+        <span class="warn">• The SparseLU Paradox:</span> Dealing ignores backlog → 23 idle cores (+15.1% loss!)<br>
+        <span style="color: #4ADE80; font-weight: bold;">• The NOVA Solution:</span> Dynamic co-scheduling balances locality with queue backlog
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Callout Banner (Matching Slides 2–6, perfectly filling vertical canvas) -->
+  <div class="callout-banner" style="margin-bottom: 10px;">
+    <strong>Executive Summary:</strong> Pure locality scheduling cuts interconnect communication stalls by up to 80%, but causes severe core starvation on irregular task graphs (+15.1% loss). NOVA dynamically co-schedules memory affinity and queue balance to achieve peak performance.
+  </div>
+
+  <div class="footer">
+    <span>Locality-Aware Task Scheduling on Heterogeneous HPC Architectures</span>
+    <span>01 / 06</span>
+  </div>
+</div>
+
+<!-- SLIDE 2: HARDWARE FOUNDATIONS -->
+<div class="slide">
+  <div class="badge-row">
+    <span class="badge-dark">PART 01</span>
+    <span class="badge-outline">HARDWARE TOPOLOGY & LATENCY MODELS</span>
+  </div>
+
+  <div class="slide-title-wrap">
+    <div class="slide-title">
+      Two Memory Models, <span class="highlight-box">Two Latency Cliffs</span>
+    </div>
+    <div class="slide-subtitle">Discrete socket memory hierarchies vs. distributed shared L2 cache on an 8×8 mesh</div>
+  </div>
+
+  <div class="grid-2">
+    <!-- AMD Opteron -->
+    <div class="card card-blue" style="justify-content: space-between;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div class="card-title">AMD Opteron 8-Node NUMA</div>
+          <span class="pill pill-white" style="font-size: 12.5px;">HyperTransport Interconnect</span>
+        </div>
+        <ul class="spec-list">
+          <li><strong>Topology:</strong> 8 discrete sockets (3–6 cores per node, 24–48 cores total)</li>
+          <li><strong>Memory Hierarchy:</strong> Dedicated physical DRAM channels per socket (discrete banks)</li>
+          <li><strong>Local Access Latency:</strong> <strong style="color: #047857;">~40 CPU cycles</strong> (Local Node RAM via integrated IMC)</li>
+          <li><strong>Remote Access Latency:</strong> <strong style="color: #B91C1C;">240 – 340 CPU cycles</strong> (Cross-socket HyperTransport bus)</li>
+          <li><strong>Network Diameter:</strong> 3 hops maximum between opposing sockets</li>
+          <li><strong>Memory Distribution:</strong> First-touch page allocation (4 KB page granularity)</li>
+          <li><strong>Failure Mode:</strong> Aggressive work-stealing causes severe bus saturation and 6×–8× memory stall cycles</li>
+        </ul>
+      </div>
+
+      <div style="margin-top: 14px; padding: 12px 16px; background: #FFFFFF; border: 1.5px solid #111827; border-radius: 10px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.45;">
+        <strong>Hardware Interconnect Spec:</strong> HyperTransport 3.0 (6.4 GT/s per link) · 6.0×–8.5× remote access penalty · Coherent CC-NUMA cache protocol · Hardware IMC on-die
+      </div>
+    </div>
+
+    <!-- TILEPro64 -->
+    <div class="card card-peach" style="justify-content: space-between;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div class="card-title">TILEPro64 64-Tile Manycore Mesh</div>
+          <span class="pill pill-white" style="font-size: 12.5px;">8×8 2D Dynamic Mesh</span>
+        </div>
+        <ul class="spec-list">
+          <li><strong>Topology:</strong> 8×8 2D grid network (1 VLIW core per tile, 64 cores total)</li>
+          <li><strong>Memory Hierarchy:</strong> Distributed shared L2 cache (64 KB slice homed per tile = 4 MB total)</li>
+          <li><strong>Local Access Latency:</strong> <strong style="color: #047857;">10 CPU cycles</strong> (Local tile L2 cache bank)</li>
+          <li><strong>Remote Access Latency:</strong> <strong style="color: #B91C1C;">38 cycles base + 2 cycles per Manhattan hop (|Δx| + |Δy|)</strong></li>
+          <li><strong>Network Diameter:</strong> 14 hops between opposite corners ((7-0) + (7-0) = 14 hops = 66 cycles)</li>
+          <li><strong>Memory Distribution:</strong> Coarse (entire buffer in 1 tile) vs Fine (striped cache lines)</li>
+          <li><strong>Failure Mode:</strong> Center bisection link contention; static home cache trapping across tiles</li>
+        </ul>
+      </div>
+
+      <div style="margin-top: 14px; padding: 12px 16px; background: #FFFFFF; border: 1.5px solid #111827; border-radius: 10px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.45;">
+        <strong>Mesh Interconnect Spec:</strong> 3 separate dynamic networks (UDI, IDN, MDN) · 16 unidirectional 32-bit channels · XY Dimension-Order Routing · No central crossbar
+      </div>
+    </div>
+  </div>
+
+  <div class="callout-banner">
+    <strong>Architectural Lesson:</strong> In NUMA, memory latency is tied to physical socket boundaries. In TILEPro64, it scales continuously with 2D geometric Manhattan distance. Uniform task schedulers fail catastrophically on both.
+  </div>
+
+  <div class="footer">
+    <span>Locality-Aware Task Scheduling · Hardware Topology & Latency Models</span>
+    <span>02 / 06</span>
+  </div>
+</div>
+
+<!-- SLIDE 3: 10 ARCHITECTURAL HOTSPOTS -->
+<div class="slide">
+  <div class="badge-row">
+    <span class="badge-dark">PART 02</span>
+    <span class="badge-outline">RUNTIME PATHOLOGY AUDIT</span>
+  </div>
+
+  <div class="slide-title-wrap">
+    <div class="slide-title">
+      Why Naive Locality Fails: <span class="highlight-box">The 10 Hotspots</span>
+    </div>
+    <div class="slide-subtitle">Deep audit of Muddukrishna et al. (2015) revealing root causes of runtime regression</div>
+  </div>
+
+  <div class="grid-3">
+    <!-- Card 1: H1-H4 -->
+    <div class="card" style="justify-content: space-between;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div class="card-title" style="font-size: 21px;">Stealing & Placement</div>
+          <span class="pill pill-blue" style="font-size: 12px;">H1 – H4</span>
+        </div>
+        <ul class="spec-list" style="font-size: 14px; gap: 10px;">
+          <li><strong>H1 (Static Steal Reach):</strong> Hard-coded vicinity size starves threads on Map or drags 6× remote stalls on Vecmul.</li>
+          <li><strong>H2 (Queue-Level Stealing):</strong> Pops victim queue tail blindly; ignores whether another task in that queue has local data!</li>
+          <li><strong>H3 (Load-Blind Placement):</strong> Dealer routes to argmin(comm_cost) without reading queue length; piles all work on 1 core.</li>
+          <li><strong>H4 (Binary Threshold Cliffs):</strong> Hard gates (sum(D) &gt; LLC/C) trigger heavy O(N²) path with no calibration.</li>
+        </ul>
+      </div>
+      <div style="margin-top: 12px; padding: 10px 14px; background: #EEF2FF; border: 1.5px solid #111827; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.35;">
+        <strong>Root Pathology:</strong><br>Blind queue-tail popping &amp; zero queue length feedback
+      </div>
+    </div>
+
+    <!-- Card 2: H5-H7b -->
+    <div class="card" style="justify-content: space-between;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div class="card-title" style="font-size: 21px;">Data Model & Feedback</div>
+          <span class="pill pill-peach" style="font-size: 12px;">H5 – H7</span>
+        </div>
+        <ul class="spec-list" style="font-size: 14px; gap: 10px;">
+          <li><strong>H5 (Fragile Footprints):</strong> Footprint vector D relies on OpenMP depend clauses. Incomplete clauses silently ruin placement.</li>
+          <li><strong>H6 (No Feedback Loop):</strong> Data distribution is frozen at omp_malloc. Runtime never migrates hot mis-placed pages.</li>
+          <li><strong>H7 (Coarse/Fine Menu Blind Spot):</strong> Rigid 2-item menu fails on irregular matrix blocks (SparseLU), causing severe regression.</li>
+          <li><strong>H7b (All-Node Over-Allocation):</strong> Fallback spreads pages across all 8 sockets, amplifying cross-socket bus contention.</li>
+        </ul>
+      </div>
+      <div style="margin-top: 12px; padding: 10px 14px; background: #FFF1EB; border: 1.5px solid #111827; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.35;">
+        <strong>Root Pathology:</strong><br>Frozen data distribution &amp; lack of dynamic re-homing
+      </div>
+    </div>
+
+    <!-- Card 3: H8-H10b -->
+    <div class="card card-blue" style="justify-content: space-between;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div class="card-title" style="font-size: 21px;">Mesh Bottlenecks</div>
+          <span class="pill pill-white" style="font-size: 12px;">H8 – H10</span>
+        </div>
+        <ul class="spec-list" style="font-size: 14px; gap: 10px;">
+          <li><strong>H8 (Static Home-Cache Trapping):</strong> Data is permanently locked to initial home cache; forces brutal locality vs load trade-off.</li>
+          <li><strong>H9 (Center Bisection Contention):</strong> XY dimension-order routing concentrates traffic on center bisection links (tiles 3,3 to 4,4).</li>
+          <li><strong>H10 (2D Coarse/Fine Mismatch):</strong> 1D line striping destroys 2D spatial locality for matrix stencils and blocked solvers.</li>
+          <li><strong>H10b (14-Hop Corner Drag):</strong> Remote diagonal tile steals incur up to 66 CPU cycles, stalling VLIW execution pipelines.</li>
+        </ul>
+      </div>
+      <div style="margin-top: 12px; padding: 10px 14px; background: #FFFFFF; border: 1.5px solid #111827; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.35;">
+        <strong>Root Pathology:</strong><br>Center bisection link saturation &amp; 1D striping mismatch
+      </div>
+    </div>
+  </div>
+
+  <div class="callout-banner">
+    <strong>Audit Discovery:</strong> Optimizing memory locality while ignoring queue backlog and interconnect contention is mathematically self-defeating on irregular task graphs.
+  </div>
+
+  <div class="footer">
+    <span>Auditing Muddukrishna et al. (2015) · Hotspots H1–H10 Taxonomy</span>
+    <span>03 / 06</span>
+  </div>
+</div>
+
+<!-- SLIDE 4: EMPIRICAL REPRODUCTION: AMD OPTERON NUMA & SPARSLU PARADOX -->
+<div class="slide">
+  <div class="badge-row">
+    <span class="badge-dark">PART 03</span>
+    <span class="badge-outline">EMPIRICAL REPRODUCTION: NUMA HARDWARE</span>
+  </div>
+
+  <div class="slide-title-wrap">
+    <div class="slide-title">
+      The SparseLU Paradox: <span class="highlight-box">When Locality Slows Down</span>
+    </div>
+    <div class="slide-subtitle">100 benchmark runs on 8-node AMD Opteron server (24–48 cores) · 100% verified Figure 7 reproduction</div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Left Column: Figure 7 Reproduction Chart -->
+    <div class="card" style="padding: 20px; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; font-size: 17px; margin-bottom: 6px;">1. AMD Opteron NUMA Reproduction (100 Runs)</div>
+        <img src="../results/numa/fig7_reproduction.png" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1.5px solid #111827; margin-bottom: 8px;" alt="NUMA Reproduction Chart">
+      </div>
+
+      <!-- 4-pill benchmark breakdown fills space under graph -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px;">
+        <div style="background: #DCFCE7; border: 1.5px solid #111827; border-radius: 8px; padding: 8px 10px;">
+          <strong style="color: #065F46;">Map:</strong> −45.1% Comm Cost · −19.0% Execution Cycles (0.81×)
+        </div>
+        <div style="background: #EEF2FF; border: 1.5px solid #111827; border-radius: 8px; padding: 8px 10px;">
+          <strong style="color: #1E40AF;">Matmul:</strong> −22.5% Comm Cost · Balanced Runtime Parity
+        </div>
+        <div style="background: #F8FAFC; border: 1.5px solid #111827; border-radius: 8px; padding: 8px 10px;">
+          <strong>Reduce &amp; Jacobi:</strong> Linear locality scaling across all 8 nodes
+        </div>
+        <div style="background: #FEE2E2; border: 1.5px solid #111827; border-radius: 8px; padding: 8px 10px;">
+          <strong style="color: #B91C1C;">SparseLU:</strong> −26.7% Comm BUT +15.1% SLOWER!
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: The SparseLU Pathology Explained -->
+    <div class="card card-dark" style="padding: 22px; justify-content: space-between;">
+      <div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #FFD147; margin-bottom: 4px;">The SparseLU Pathology Dissected</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #94A3B8; margin-bottom: 12px;">// Why locality dealing caused a +15.1% execution slowdown:</div>
+
+        <ol style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; line-height: 1.4; color: #CBD5E1; padding-left: 20px;">
+          <li><strong style="color: #FFFFFF;">Irregular Task DAG:</strong> Tasks have skewed, asymmetric input dependencies across matrix sub-blocks.</li>
+          <li><strong style="color: #FFFFFF;">Load-Blind Dealing:</strong> Dealer blindly placed ALL critical-path tasks onto Node 0 because Node 0 held initial pivot blocks.</li>
+          <li><strong style="color: #F87171;">Severe Worker Starvation:</strong> Queue 0 ballooned to 20 tasks; Queues 1–7 sat completely empty (0 tasks)!</li>
+          <li><strong style="color: #F87171;">Starvation Wipes Comm Win:</strong> 23 worker cores sat completely idle. The −26.7% comm win was wiped out by idle core stall cycles!</li>
+        </ol>
+      </div>
+
+      <!-- Telemetry Visual Box -->
+      <div class="code-box" style="margin-top: 10px; border-color: #334155; font-size: 12.5px;">
+        <span class="comment">// Live Queue Backlog Snapshot during SparseLU:</span><br>
+        Node 0 Queue: <span class="warn">[████████████████████] 20 Tasks (Bottleneck)</span><br>
+        Nodes 1–7:    <span class="cyan">[                    ]  0 Tasks (23 Cores Starving)</span><br>
+        Comm Savings: -26.7% (-1.2M cyc)  |  Idle Loss: +41.8% (+2.4M cyc)<br>
+        <span class="highlight">Empirical Result: Locality Comm Win (-26.7%) &lt; Idle Core Loss (+15.1%)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout-banner">
+    <strong>THE NUMA TAKEAWAY:</strong> Memory locality and core load balance cannot be optimized independently. On irregular DAGs, load balance strictly dominates memory locality.
+  </div>
+
+  <div class="footer">
+    <span>Empirical Reproduction: AMD Opteron NUMA &amp; The SparseLU Paradox</span>
+    <span>04 / 06</span>
+  </div>
+</div>
+
+<!-- SLIDE 5: MANYCORE SIMULATION: TILEPRO64 8x8 MESH -->
+<div class="slide">
+  <div class="badge-row">
+    <span class="badge-dark">PART 04</span>
+    <span class="badge-outline">MANYCORE SIMULATION: 8×8 2D MESH</span>
+  </div>
+
+  <div class="slide-title-wrap">
+    <div class="slide-title">
+      TILEPro64 8×8 Mesh: <span class="highlight-box">Locality Across 64 Tiles</span>
+    </div>
+    <div class="slide-subtitle">56 simulation configurations across 64 cores · 10 vs 38+2·hop cycle-accurate 2D mesh model</div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Left Column: TILEPro64 Simulation Chart -->
+    <div class="card" style="padding: 20px; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; font-size: 17px; margin-bottom: 6px;">2. TILEPro64 8×8 Mesh Simulation (64 Cores)</div>
+        <img src="../tilepro64/results/tilepro64_results.png" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1.5px solid #111827; margin-bottom: 8px;" alt="TILEPro64 Simulation Chart">
+      </div>
+
+      <!-- 4-pill mesh findings breakdown fills space under graph -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px;">
+        <div style="background: #DCFCE7; border: 1.5px solid #111827; border-radius: 8px; padding: 8px 10px;">
+          <strong style="color: #065F46;">Map Comm Drop:</strong> −80.3% Comm Cost (6.67M down to 1.31M cycles)
+        </div>
+        <div style="background: #DCFCE7; border: 1.5px solid #111827; border-radius: 8px; padding: 8px 10px;">
+          <strong style="color: #065F46;">Map Speedup:</strong> 39.3% Speedup (281K down to 170K cycles)
+        </div>
+        <div style="background: #FEF08A; border: 1.5px solid #111827; border-radius: 8px; padding: 8px 10px;">
+          <strong style="color: #854D0E;">Steal Elimination:</strong> 0 Steals in LA+Coarse vs 63 in WS baseline
+        </div>
+        <div style="background: #EEF2FF; border: 1.5px solid #111827; border-radius: 8px; padding: 8px 10px;">
+          <strong style="color: #1E40AF;">Vecmul:</strong> Fine distribution prevents bisection link bottleneck
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: 2D Mesh Locality Dynamics -->
+    <div class="card card-peach" style="padding: 22px; justify-content: space-between;">
+      <div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #111827; margin-bottom: 4px;">2D Mesh Locality Dynamics (64 Cores)</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #4B5563; margin-bottom: 12px;">// Hop-distance routing, bisection limits, and data distribution</div>
+
+        <ul class="spec-list" style="font-size: 14px; gap: 9px;">
+          <li><strong>Cycle-Accurate Formula:</strong> Verified against 10-cycle local L2 and 38+2·hop remote formulas across all 64 tiles.</li>
+          <li><strong>Network Diameter Limits:</strong> 14 hops between opposite corners ((7-0)+(7-0)) = 66 cycles max latency.</li>
+          <li><strong>Coarse Data Allocation:</strong> Homing array on Tile 0 yields 0 steals on Map, but chokes bisection on stencils.</li>
+          <li><strong>Fine Data Allocation:</strong> Striping lines avoids hot spots but raises base access latency to ~52 cycles.</li>
+        </ul>
+      </div>
+
+      <!-- Telemetry Steal Comparison Box -->
+      <div class="code-box" style="margin-top: 10px; font-size: 12.5px;">
+        <span class="comment">// Work-Stealing vs Locality-Aware Dealing on 64 Tiles:</span><br>
+        Work-Stealing: <span class="warn">[██████████████████████████████] 63 Remote Steals (Avg 7.2 hops)</span><br>
+        LA + Coarse:   <span class="highlight">[                               ]  0 Steals (100% Local Execution!)</span><br>
+        • Interconnect Traffic: -80.3% mesh packet transmissions across grid<br>
+        <span class="cyan">Verified by test_tilepro64.cpp unit harness (11/11 tests passing)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout-banner">
+    <strong>TILEPRO64 TAKEAWAY:</strong> On 2D mesh architectures, locality-aware task dealing completely eliminates remote work-stealing overhead and drops interconnect communication cycles by 80.3%.
+  </div>
+
+  <div class="footer">
+    <span>Manycore Simulation: TILEPro64 8×8 Mesh Architecture &amp; Results</span>
+    <span>05 / 06</span>
+  </div>
+</div>
+
+<!-- SLIDE 6: THE NOVA / ALLOC SOLUTION -->
+<div class="slide">
+  <div class="badge-row">
+    <span class="badge-dark">PART 05</span>
+    <span class="badge-outline">SCHEDULER ARCHITECTURE &amp; DEFENSE</span>
+  </div>
+
+  <div class="slide-title-wrap">
+    <div class="slide-title">
+      The NOVA Solution: <span class="highlight-box">Adaptive Co-Scheduling</span>
+    </div>
+    <div class="slide-subtitle">Four architectural pillars resolving the SparseLU paradox + project deliverables summary</div>
+  </div>
+
+  <div class="grid-2x2">
+    <!-- Pillar 1 -->
+    <div class="card card-blue" style="justify-content: space-between; padding: 18px;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div class="card-title" style="font-size: 19px;">Pillar 1: Load-Aware Work Dealing (N-A)</div>
+          <span class="pill pill-white" style="font-size: 11px;">Fixes H3, H4</span>
+        </div>
+        <div class="code-box" style="padding: 7px 12px; font-size: 12.5px; margin-bottom: 8px;">
+          <span class="highlight">score(q) = α · comm_norm(D, q) + (1 - α) · occ_norm(q)</span>
+        </div>
+        <ul style="font-size: 13.5px; line-height: 1.35; color: #374151; padding-left: 18px; margin: 0;">
+          <li><strong>Dynamic Balancing:</strong> Blends data proximity with real-time queue backlog.</li>
+          <li><strong>Starvation Diverter:</strong> Diverts tasks to neighboring idle queues before congestion creates stalls.</li>
+        </ul>
+      </div>
+      <div style="margin-top: 8px; padding: 6px 10px; background: #DCFCE7; border: 1.5px solid #111827; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #065F46; font-weight: bold;">
+        ✓ Cures SparseLU Paradox: Reverses +15.1% slowdown · Balances queues within ±1
+      </div>
+    </div>
+
+    <!-- Pillar 2 -->
+    <div class="card card-peach" style="justify-content: space-between; padding: 18px;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div class="card-title" style="font-size: 19px;">Pillar 2: Task-Level Shadow Index (N-B)</div>
+          <span class="pill pill-white" style="font-size: 11px;">Fixes H2</span>
+        </div>
+        <div class="code-box" style="padding: 7px 12px; font-size: 12px; margin-bottom: 8px;">
+          <span class="highlight">steal_target = argmax_{t ∈ Top-K} ( Affinity(thief, Footprint(t)) )</span>
+        </div>
+        <ul style="font-size: 13.5px; line-height: 1.35; color: #374151; padding-left: 18px; margin: 0;">
+          <li><strong>Shadow Index:</strong> Lock-free ring buffer indexing data footprint affinities of top k=8 tasks.</li>
+          <li><strong>Locality Theft:</strong> Thief steals the task matching local RAM instead of popping queue tail blindly.</li>
+        </ul>
+      </div>
+      <div style="margin-top: 8px; padding: 6px 10px; background: #FFE5D9; border: 1.5px solid #111827; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #9A3412; font-weight: bold;">
+        ✓ Affinity Stealing: Cuts remote steal penalty by 4.2× · 0 blind victim queue pops
+      </div>
+    </div>
+
+    <!-- Pillar 3 -->
+    <div class="card card-green" style="justify-content: space-between; padding: 18px;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div class="card-title" style="font-size: 19px;">Pillar 3: Adaptive Vicinity Radius (N-C)</div>
+          <span class="pill pill-white" style="font-size: 11px;">Fixes H1</span>
+        </div>
+        <div class="code-box" style="padding: 7px 12px; font-size: 12px; margin-bottom: 8px;">
+          <span class="highlight">radius_{t+1} = clamp( radius_t + sign(rate_{EWMA} - target), 1, D_max )</span>
+        </div>
+        <ul style="font-size: 13.5px; line-height: 1.35; color: #374151; padding-left: 18px; margin: 0;">
+          <li><strong>Adaptive EWMA:</strong> Per-worker EWMA idle transition rate dynamically scales steal vicinity radius.</li>
+          <li><strong>Dynamic Clustering:</strong> Expands reach during starvation; contracts to local socket when balanced.</li>
+        </ul>
+      </div>
+      <div style="margin-top: 8px; padding: 6px 10px; background: #DCE4FF; border: 1.5px solid #111827; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #1E40AF; font-weight: bold;">
+        ✓ Adaptive Radius: Auto-tunes reach via EWMA · Steal overhead stabilized &lt; 5%
+      </div>
+    </div>
+
+    <!-- Pillar 4 -->
+    <div class="card" style="justify-content: space-between; padding: 18px;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div class="card-title" style="font-size: 19px;">Pillar 4: Dynamic Migration &amp; Zero Locks</div>
+          <span class="pill pill-peach" style="font-size: 11px;">Fixes H6, H8</span>
+        </div>
+        <div class="code-box" style="padding: 7px 12px; font-size: 12.5px; margin-bottom: 8px;">
+          <span class="highlight">Trigger Migration IF (Acc_Benefit &gt; C_mig ≈ 120 cycles)</span>
+        </div>
+        <ul style="font-size: 13.5px; line-height: 1.35; color: #374151; padding-left: 18px; margin: 0;">
+          <li><strong>Dynamic Re-homing:</strong> Migrates frequently-accessed tile cache lines toward heavy compute clusters.</li>
+          <li><strong>Lock-Free Hot Path:</strong> Coordination telemetry swaps stats via atomic CAS — zero locks!</li>
+        </ul>
+      </div>
+      <div style="margin-top: 8px; padding: 6px 10px; background: #FEF08A; border: 1.5px solid #111827; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #854D0E; font-weight: bold;">
+        ✓ Dynamic Re-homing: Migrates cache lines in 120 cyc · Atomic CAS zero-lock path
+      </div>
+    </div>
+  </div>
+
+  <div class="callout-banner">
+    <strong>NOVA PRINCIPLE:</strong> Maximize memory locality when queues are balanced; dynamically transition to load-balancing when queue backlog or interconnect contention threatens idle core stalls.
+  </div>
+
+  <div class="footer">
+    <span>NOVA / ALLoC Scheduler Architecture · High-Performance Computing</span>
+    <span>06 / 06</span>
+  </div>
+</div>
+
+</body>
+</html>

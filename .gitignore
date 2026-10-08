@@ -1,0 +1,44 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+tilepro64/bin/
+*.o
+*.so
+*.dylib
+*.a
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+extracted_paper_text.txt
+
+# Reference PDFs and research papers
+reference.pdf
+*Muddukrishna*.pdf
+
+# Scratch and Prompt Markdown files
+prompt.md
+AGENT_IMPLEMENTATION_SPEC.md
+
+# Dependencies
+node_modules/
+
+# Visual audit and temporary renders
+docs/*_renders/
+docs/pdf_audit/
+*.render*
+scratch/
+*.tmp
+
+# Draft and duplicate presentation deliverables
+output/final_slide.*
+output/*_draft.*
+
