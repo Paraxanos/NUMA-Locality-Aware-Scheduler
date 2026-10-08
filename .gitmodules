@@ -1,0 +1,3 @@
+[submodule "vendor/mir-dev"]
+	path = vendor/mir-dev
+	url = https://github.com/anamud/mir-dev.git

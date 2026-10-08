@@ -1,0 +1,11 @@
+benchmark,scheduler_policy,dist_policy,topology,run_id,exec_cycles,comm_cost_total,comm_tasks_total,comm_cost_avg,tasks_stolen,tasks_owned,check_ok
+map,ws,coarse,numa8,1,38391109,3623878656,48,75497472.0,45,3,1
+map,ws,coarse,numa8,2,36189000,3674210304,48,76546048.0,46,2,1
+map,ws,coarse,numa8,3,39831000,3724541952,48,77594624.0,46,2,1
+map,ws,coarse,numa8,4,37973605,3674210304,48,76546048.0,47,1,1
+map,ws,coarse,numa8,5,42750885,3523215360,48,73400320.0,46,2,1
+map,la,coarse,numa8,1,41467710,2013265920,48,41943040.0,0,48,1
+map,la,coarse,numa8,2,41229104,2013265920,48,41943040.0,0,48,1
+map,la,coarse,numa8,3,41496242,2013265920,48,41943040.0,0,48,1
+map,la,coarse,numa8,4,38822912,2013265920,48,41943040.0,0,48,1
+map,la,coarse,numa8,5,39769971,2013265920,48,41943040.0,0,48,1
