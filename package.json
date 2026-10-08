@@ -1,0 +1,17 @@
+{
+  "name": "novapresentation",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "pptxgenjs": "^3.12.0",
+    "sharp": "^0.32.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0"
+  }
+}

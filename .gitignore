@@ -19,3 +19,5 @@ __pycache__/
 *.py[cod]
 *$py.class
 extracted_paper_text.txt
+reference.pdf
+node_modules/
