@@ -274,14 +274,14 @@
 
   <div class="footer">
     <span>Locality-Aware Task Scheduling on Heterogeneous HPC Architectures</span>
-    <span>01 / 06</span>
+    <span>01 / 05</span>
   </div>
 </div>
 
 <!-- SLIDE 2: HARDWARE FOUNDATIONS -->
 <div class="slide">
   <div class="badge-row">
-    <span class="badge-dark">PART 1</span>
+    <span class="badge-dark">PART 01</span>
     <span class="badge-outline">HARDWARE TOPOLOGY & LATENCY MODELS</span>
   </div>
 
@@ -334,14 +334,14 @@
 
   <div class="footer">
     <span>Locality-Aware Task Scheduling · Hardware Topology & Latency Models</span>
-    <span>02 / 06</span>
+    <span>02 / 05</span>
   </div>
 </div>
 
 <!-- SLIDE 3: 10 ARCHITECTURAL HOTSPOTS -->
 <div class="slide">
   <div class="badge-row">
-    <span class="badge-dark">PART 2</span>
+    <span class="badge-dark">PART 02</span>
     <span class="badge-outline">RUNTIME PATHOLOGY AUDIT</span>
   </div>
 
@@ -400,14 +400,14 @@
 
   <div class="footer">
     <span>Auditing Muddukrishna et al. (2015) · Hotspots H1–H10 Taxonomy</span>
-    <span>03 / 06</span>
+    <span>03 / 05</span>
   </div>
 </div>
 
 <!-- SLIDE 4: EMPIRICAL REPRODUCTION & SPARSLU PARADOX -->
 <div class="slide">
   <div class="badge-row">
-    <span class="badge-dark">PART 3</span>
+    <span class="badge-dark">PART 03</span>
     <span class="badge-outline">EMPIRICAL REPRODUCTION & BENCHMARKS</span>
   </div>
 
@@ -458,22 +458,22 @@
 
   <div class="footer">
     <span>Empirical Reproduction: AMD Opteron NUMA & TILEPro64 Manycore Mesh</span>
-    <span>04 / 06</span>
+    <span>04 / 05</span>
   </div>
 </div>
 
-<!-- SLIDE 5: THE NOVA / ALLOC SOLUTION -->
+<!-- SLIDE 5: THE NOVA / ALLOC SOLUTION & DEFENSE -->
 <div class="slide">
   <div class="badge-row">
-    <span class="badge-dark">PART 4</span>
-    <span class="badge-outline">SCHEDULER ARCHITECTURE</span>
+    <span class="badge-dark">PART 04</span>
+    <span class="badge-outline">SCHEDULER ARCHITECTURE & DEFENSE</span>
   </div>
 
   <div class="slide-title-wrap">
     <div class="slide-title">
       The NOVA Solution: <span class="highlight-box">Adaptive Co-Scheduling</span>
     </div>
-    <div class="slide-subtitle">Four architectural pillars that eliminate the SparseLU bottleneck while preserving memory locality</div>
+    <div class="slide-subtitle">Four architectural pillars + defense takeaways — zero-contention control plane</div>
   </div>
 
   <div class="grid-2x2">
@@ -535,78 +535,15 @@
   </div>
 
   <div class="callout-banner" style="margin-top: 0; margin-bottom: 14px;">
-    <strong>NOVA Principle:</strong> Maximize memory locality when queues are balanced; dynamically transition to load-balancing when queue backlog threatens idle core stalls.
+    <strong>NOVA Principle:</strong> Maximize memory locality when queues are balanced; dynamically transition to load-balancing when queue backlog or interconnect contention threatens idle core stalls.
   </div>
 
   <div class="footer">
     <span>NOVA / ALLoC Scheduler Architecture · High-Performance Computing</span>
-    <span>05 / 06</span>
-  </div>
-</div>
-
-<!-- SLIDE 6: SUMMARY, DELIVERABLES & DEFENSE Q&A -->
-<div class="slide">
-  <div class="badge-row">
-    <span class="badge-dark">PART 5</span>
-    <span class="badge-outline">SUMMARY & DEFENSE READY</span>
-  </div>
-
-  <div class="slide-title-wrap">
-    <div class="slide-title">
-      Project Deliverables & <span class="highlight-box">Examiner Defense Q&A</span>
-    </div>
-    <div class="slide-subtitle">Full dual-architecture reproduction, standalone manycore simulator, and NOVA scheduler specification</div>
-  </div>
-
-  <div class="grid-2">
-    <!-- Deliverables Card -->
-    <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <div class="card-title">Summary of Concrete Deliverables</div>
-        <span class="pill pill-green" style="font-size: 12px;">100% COMPLETE & VERIFIED</span>
-      </div>
-      <ul class="spec-list" style="font-size: 15px; gap: 9px;">
-        <li><strong>1. AMD Opteron NUMA Baseline Reproduction:</strong> 100 benchmark runs across 5 kernels; replicated Figure 7 with 100% test pass (check_ok=1).</li>
-        <li><strong>2. Standalone TILEPro64 8×8 Mesh Simulator:</strong> Built full C++/Python mesh simulator from scratch; modeled 10 vs 38+2·hop cycles; 11/11 tests passing.</li>
-        <li><strong>3. Discovery of the SparseLU Paradox:</strong> Empirically proved the queue starvation pathology that causes locality dealing to run +15.1% slower than work-stealing.</li>
-        <li><strong>4. 10-Hotspot Audit Taxonomy (H1–H10):</strong> Formalized H1–H7 NUMA bottlenecks + H8–H10 TILEPro64 mesh bottlenecks.</li>
-        <li><strong>5. Full NOVA / ALLoC Scheduler Architecture:</strong> Complete mathematical formulation, shadow index stealing algorithm, and lock-free double-buffered control plane.</li>
-        <li><strong>6. Open-Source Codebase & Git PR #3:</strong> Fully reproducible repo with automated bash/Python harnesses on GitHub.</li>
-      </ul>
-    </div>
-
-    <!-- Defense Q&A Card -->
-    <div class="card card-dark">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <div class="card-title">Anticipated Examiner Questions & Answers</div>
-        <span class="pill pill-yellow" style="font-size: 12px;">DEFENSE READY</span>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 13px; font-size: 14.5px; line-height: 1.45;">
-        <div>
-          <strong style="color: #FFD147;">Q1: Why simulate TILEPro64 instead of running real hardware?</strong><br>
-          <span style="color: #CBD5E1;">Ans: TILEPro64 is discontinued specialty hardware. A software model implementing the exact 8×8 mesh and 2D Manhattan latency matrix enables deterministic, cycle-accurate evaluation without hardware drift.</span>
-        </div>
-        <div>
-          <strong style="color: #FFD147;">Q2: Why does work-stealing suffer 63 steals in Map while LA+Coarse has 0?</strong><br>
-          <span style="color: #CBD5E1;">Ans: In work-stealing, Tile 0 creates all 64 tasks; the other 63 idle tiles must each steal remotely. Under LA+Coarse, the dealer immediately routes each task to its home tile, eliminating steal overhead.</span>
-        </div>
-        <div>
-          <strong style="color: #FFD147;">Q3: How does NOVA avoid lock contention on the critical path?</strong><br>
-          <span style="color: #CBD5E1;">Ans: Workers make decisions locally in O(nodes) time without locks. Global queue snapshots and α tuning run in a double-buffer swapped via atomic CAS every 64 ops — zero locks on the hot path.</span>
-        </div>
-        <div>
-          <strong style="color: #FFD147;">Q4: What is the main takeaway for future HPC runtimes?</strong><br>
-          <span style="color: #FFD147; font-weight: 600;">Ans: Memory locality and load balance cannot be optimized independently. Adaptive co-scheduling is strictly necessary for scalable speedup.</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="footer">
-    <span>Locality-Aware Task Scheduling · Final Project Defense</span>
-    <span>06 / 06</span>
+    <span>05 / 05</span>
   </div>
 </div>
 
 </body>
 </html>
+
