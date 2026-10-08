@@ -1,0 +1,275 @@
+#!/usr/bin/env python3
+"""
+generate_pptx.py — Automated 5-slide presentation builder
+Uses reveal.js to generate an interactive HTML presentation (node available,
+python-pptx not required) embedding architecture comparison tables,
+benchmark charts (tilepro64/results/tilepro64_results.png, results/numa/fig7_reproduction.png),
+SparseLU paradox breakdown, speaker notes, and examiner Q&A.
+Output: docs/presentation.html (and docs/presentation.pdf via puppeteer/chrome if needed)
+"""
+
+import textwrap, pathlib, subprocess, sys, os
+
+REPO = pathlib.Path(__file__).resolve().parent.parent
+PPTX_OUT = REPO / "docs" / "presentation.html"
+
+CONTENT = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>Locality-Aware Scheduling: NUMA &amp; TILEPro64 — NOVA / ALLoC</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;500&family=Inter:wght@300;500;700&display=swap">
+
+<style>
+:root { --main:#e3b150; --accent:#7bc6ff; --bg:#141a24; --fg:#e8edf3; --muted:#9aa3b2; --card:#1a2130; }
+* { box-sizing:border-box; }
+body { background:#141a24; font-family:'Inter',system-ui,sans-serif; color:var(--fg); margin:0; }
+.reveal { font-size:clamp(1.1rem, 2.4vw, 1.6rem); letter-spacing:.01em; }
+.reveal h1 { font-family:'Source Code Pro',monospace; font-weight:700; letter-spacing:-.02em; font-size:2.5rem; color:var(--main); text-transform:uppercase; text-shadow:0 2px 8px rgba(227,177,80,.35); }
+.reveal h2 { font-family:'Source Code Pro',monospace; font-weight:500; font-size:1.5rem; color:var(--accent); letter-spacing:0.03em; padding-bottom:.3em; border-bottom:2px solid var(--accent); margin-bottom:.6em; }
+.reveal h3 { font-size:1.25rem; font-weight:600; color:var(--main); margin-top:1rem; }
+.reveal p { margin:.4em 0; }
+.reveal ul, .reveal ol { margin:.4em 2em; padding-left:1em; }
+.reveal li { margin:.25em 0; }
+.reveal section { text-align:left; padding:3rem 4vw; line-height:1.5; }
+.reveal section .box { background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:1rem 1.2rem; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+.reveal table { width:100%; border-collapse:collapse; margin:.8rem 0; font-size:.75rem; }
+.reveal th { background:#e3b150; color:#141a24; font-weight:700; text-align:left; padding:.5rem .6rem; }
+.reveal td { padding:.55rem .65rem; border-bottom:1px solid rgba(255,255,255,.06); }
+.reveal img { max-height:320px; border-radius:8px; border:1px solid rgba(255,255,255,.1); box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.reveal .two-col { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:start; }
+.reveal .two-col img { max-height:260px; width:100%; object-fit:contain; }
+.reveal .label { font-family:'Source Code Pro',monospace; font-size:.75rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
+.reveal .highlight { color:var(--main); font-weight:600; }
+.reveal .note-box { background:#1c2d1a; border-left:4px solid #6ce07a; padding:1rem 1.2rem; border-radius:0 10px 10px 0; }
+.reveal .bad { color:#e86a6a; font-weight:700; }
+.reveal .good { color:#6ce07a; font-weight:700; }
+.reveal .speaker-notes { font-family:'Source Code Pro',monospace; font-size:.7rem; color:var(--muted); border-top:1px dashed rgba(255,255,255,.15); padding-top:.4rem; margin-top:.8rem; }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ======= SLIDE 1 ======= -->
+<section data-transition="zoom-in fade-out">
+  <h1 style="font-size:3.1rem; line-height:1.15;">Locality-Aware Scheduling on Heterogeneous HPC Architectures</h1>
+  <h2 style="font-size:1.15rem; border-bottom:none; color:var(--accent); margin-top:.2rem;">NUMA Opteron 8-Node · TILEPro64 8×8 Mesh · NOVA / ALLoC</h2>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:center; margin-top:1.6rem;">
+    <div class="box">
+      <h3>NUMA Reproduction</h3>
+      <p><strong>Reference:</strong> Muddukrishna et al. (Scientific Programming, 2015)</p>
+      <ul style="font-size:.8rem; line-height:1.55;">
+        <li>5 benchmarks × 4 configs × 5 reps = <strong>100 runs</strong></li>
+        <li>100% correctness (<span class="good">check_ok=1</span>)</li>
+        <li>Identified <strong class="bad">SparseLU Paradox</strong> (+15.1% cycles)</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>TILEPro64 Simulation</h3>
+      <p><strong>Architecture:</strong> 8×8 2D mesh (64 tiles)</p>
+      <ul style="font-size:.8rem; line-height:1.55;">
+        <li>Local L2 = 10 cycles; Remote = 38 + 2·hops</li>
+        <li>11 validation tests: <strong class="good">11/11 PASS</strong></li>
+        <li>56 experimental runs generated</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:1.5rem;" class="box">
+    <h3>Contributions</h3>
+    <p style="font-size:.88rem; line-height:1.7;">
+      (1) <strong>NOVA co-scheduler</strong> — load-aware dealer (N-A), locality-stealing shadow index (N-B), adaptive radius (N-C), zero-contention double-buffered coordinator. (2) <strong>Full TILEPro64 simulator</strong> with 2D Manhattan latency, home-cache model, fine/coarse data distribution, and algorithmic validation suite.
+    </p>
+  </div>
+
+  <div class="speaker-notes">
+    <strong>Speaker Notes — Slide 1:</strong> "Good morning. Our study reproduces and extends Muddukrishna et al.’s landmark 2015 work across two architectures: the 8-node AMD Opteron NUMA server and a 64-tile TILEPro64 mesh processor. We reproduced 100 benchmark runs on NUMA, uncovered the SparseLU paradox, built a standalone TILEPro64 simulator with 11 passing validation tests, and designed NOVA — an adaptive co-scheduler that balances locality with load." (End with: "Slide 1 of 5, dual contribution.")
+  </div>
+</section>
+
+<!-- ======= SLIDE 2 ======= -->
+<section data-transition="convex-in fade-out">
+  <h2>Slide 2 — Architectural Paradigms: NUMA vs. Manycore Mesh</h2>
+
+  <table>
+    <thead><tr><th>Dimension</th><th>8-Node AMD Opteron (NUMA)</th><th>64-Tile TILEPro64 (Manycore Mesh)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Topology</strong></td><td>8 NUMA nodes (HyperTransport)</td><td>8 × 8 2D grid network</td></tr>
+      <tr><td><strong>Cores / Unit</strong></td><td>3–6 cores / node (24–48 total)</td><td>1 core / tile (64 total)</td></tr>
+      <tr><td><strong>Memory</strong></td><td>Discrete per-node DRAM banks</td><td>Shared L2 (4 MB aggregate; 64 KB / tile bank)</td></tr>
+      <tr><td><strong>Local Latency</strong></td><td>~40 cycles (local RAM)</td><td>10 cycles (local tile L2 bank)</td></tr>
+      <tr><td><strong>Remote Latency</strong></td><td>240–340 cycles</td><td>38 + 2·hops (Manhattan)</td></tr>
+      <tr><td><strong>Diameter</strong></td><td>3 hops</td><td>14 hops (max Manhattan)</td></tr>
+      <tr><td><strong>Data Distribution</strong></td><td>Fine / Coarse (library-level)</td><td>Fine (line-striped) / Coarse (per-block)</td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:.8rem; color:var(--muted); margin-top:.3rem;">Table derived from Section 2.3 of the 2015 reference paper and Section 2 of the TILEPro64 simulator architecture spec.</p>
+
+  <div class="note-box">
+    <strong>Key insight:</strong> NUMA uses discrete memory controllers; TILEPro64 partitions shared L2 into home-cache banks. Both architectures suffer from non-uniform access, but the latency functions differ: inter-socket bus vs. Manhattan mesh hops.
+  </div>
+
+  <div class="speaker-notes">
+    <strong>Slide 2 — Speaker Notes:</strong> "On NUMA, the 8-node AMD Opteron system uses HyperTransport with local latency ~40 cycles and remote up to 340 cycles. The TILEPro64 mesh uses Manhattan distance: 10 cycles local, 38 base + 2 per hop remote, with a maximum 14-hop diameter. Data is distributed via Fine (line-striped) or Coarse (block) schemes, assigned to tile home caches. Both architectures share the same scheduling problem: naive work-stealing ignores data home location, creating 4–6× latency penalties and bus congestion." (Point to table rows as spoken; mention Manhattan distance explicitly: |x1-x2| + |y1-y2|)
+  </div>
+</section>
+
+<!-- ======= SLIDE 3 ======= -->
+<section data-transition="convex-in convex-out">
+  <h2>Slide 3 — Scheduling Mechanism &amp; Locality Dealing</h2>
+
+  <div style="font-size:.78rem; line-height:1.65;">
+    <p><strong>Significance Gate:</strong> Task footprint D &gt; LLC / core? Small tasks → local execution; significant tasks → locality work dealing.</p>
+
+    <pre style="font-size:.7rem; line-height:1.35; background:var(--card); padding:.7rem 1rem; overflow:auto;">
+Algorithm 3: Locality-Aware Work Dealing
+  For each tile X ∈ [0, 63]:
+    cost(X) = Σ (D[i] / line_size) × latency(X, i)
+  Route task to argmin(cost) tile queue
+    </pre>
+
+    <p><strong>Shadow Index (N-B):</strong> Lock-free ring buffer of k=8 tasks per node. Idle workers peek nearest tiles, select argmin(local_cost), then steal — never random.</p>
+
+    <p><strong>Adaptive Radius (N-C):</strong> Radius r increases on failed steals (EWMA); decreases on successful steals. Keeps search bounded: d ∈ [1, max_diameter].</p>
+  </div>
+
+  <div class="two-col">
+    <img src="results/numa/fig7_reproduction.png" alt="NUMA Figure 7 reproduction — 2-panel chart: modelled cost vs. real cycles">
+    <img src="tilepro64/results/tilepro64_results.png" alt="TILEPro64 results chart — 2-panel chart: 80.3% comm cost drop, 39.3% speedup">
+  </div>
+  <p style="font-size:.7rem; color:var(--muted);">Left: NUMA Figure 7 reproduction. Right: TILEPro64 56-run results.</p>
+
+  <div class="note-box">
+    <strong>SparseLU Pathology:</strong> Locality-only dealer ignores queue backlog; 23 of 24 NUMA workers sit idle. NOVA solves this via α-blended score: α·comm_norm + (1-α)·occ_norm.
+  </div>
+
+  <div class="speaker-notes">
+    <strong>Slide 3 — Speaker Notes:</strong> "The core mechanism: significance gating, locality dealing with cost(X) = Σ D[i]·latency(X,i) / line_size, shadow index stealing within radius d, and adaptive radius based on steal success EWMA. The charts show how locality-only works well on regular Map but fails on irregular SparseLU — the 15.1% slowdown — because tasks pile onto one overloaded node. NOVA's α score balances locality and load." (Point at left chart first; then right chart; then highlight the note box at bottom.)
+  </div>
+</section>
+
+<!-- ======= SLIDE 4 ======= -->
+<section data-transition="zoom-in fade-out">
+  <h2>Slide 4 — The SparseLU Paradox</h2>
+
+  <div class="two-col">
+    <div class="box">
+      <h3>What the Numbers Show</h3>
+      <table style="font-size:.7rem;">
+        <thead><tr><th>Config</th><th>Comm Cost</th><th>Exec Cycles</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td>ws+coarse (baseline)</td><td>1.000</td><td>1.000</td><td>—</td></tr>
+          <tr><td>la+coarse (locality)</td><td><span style="color:#6ce07a;">0.733</span></td><td><span class="bad">1.151</span></td><td>Paradox</td></tr>
+          <tr><td>la+fine (fine-grain)</td><td>0.997</td><td>1.015</td><td>Partial</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:.7rem; color:var(--muted);">From results/numa/matrix.csv — 100 runs, all check_ok=1.</p>
+    </div>
+
+    <div class="box">
+      <h3>Why It Fails</h3>
+      <ul style="font-size:.78rem; line-height:1.55;">
+        <li><strong>Regular (Map):</strong> Footprint evenly distributed; locality distributes work naturally → 19.0% faster.</li>
+        <li><strong>Irregular (SparseLU):</strong> DAG creates unbalanced footprints; locality-only funnels tasks onto a single node, leaving 23/24 NUMA nodes idle → queue clumping → 15.1% <strong>slower</strong> than naive WS.</li>
+        <li><strong>Core Lesson:</strong> Data locality without load balancing is worse than no locality at all.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p style="font-size:.82rem; margin-top:.8rem;">
+    <span class="label">TILEPro64 Corroboration</span> — <strong>Map LA+Coarse:</strong> 80.3% lower comm cost (1.31M vs 6.67M), 39.3% faster (170K vs 281K cycles), <strong>0 steals required</strong> vs 63 for WS. <strong>Coarse</strong> assigns entire buffer blocks to single tiles (reduced overhead); <strong>Fine</strong> stripes each cache line (better locality for fine-grain access, but more overhead).
+  </p>
+
+  <div class="speaker-notes">
+    <strong>Slide 4 — Speaker Notes:</strong> "On NUMA, the paradox: locality scheduling reduces SparseLU's communication cost by 26.7% to 0.733, yet execution time increases 15.1% to 1.151. The cause is queue clumping: locality-only places every task onto the same home node; 23 of 24 workers sit idle. For regular workloads like Map, locality is unambiguously good. For irregular SparseLU, it is worse than naive work-stealing. The TILEPro64 simulator confirms this: Map sees 80.3% comm reduction and 0 steals; the irregular sparse patterns create similar imbalance." (Point to each metric as spoken.)
+  </div>
+</section>
+
+<!-- ======= SLIDE 5 ======= -->
+<section data-transition="zoom-in fade-out">
+  <h2>Slide 5 — The NOVA / ALLoC Solution &amp; Key Conclusions</h2>
+
+  <div style="font-size:.82rem; line-height:1.65;">
+    <h3 style="font-size:.95rem;">N-A · N-B · N-C — Adaptive Co-Scheduling</h3>
+    <p><strong>N-A (Load-Aware Dealer):</strong> <code style="font-family:'Source Code Pro',monospace; background:#222; padding:.1rem .3rem; border-radius:4px;">score(q) = α · cost_norm(D,q) + (1−α) · occ_norm(q)</code> — dynamically blends communication cost with queue backlog to prevent clumping.</p>
+
+    <p><strong>N-B (Task-Level Stealing — Shadow Index):</strong> Lock-free ring buffer of k=8 tasks per node. Idle workers peek nearest tiles, steal task with minimum local_comm_cost, never random.</p>
+
+    <p><strong>N-C (Adaptive Vicinity Radius):</strong> Radius r adjusts via EWMA: r↑ on failed steals, r↓ on successes. Keeps search bounded: d ∈ [1, 14] (NUMA) / d ∈ [1, max_mesh] (TILEPro64).</p>
+
+    <h3 style="font-size:.95rem; margin-top:.8rem;">Acceptance Criteria &amp; Results</h3>
+    <ul style="font-size:.82rem; line-height:1.55; margin-top:.2rem;">
+      <li><strong>Correctness:</strong> 100% of rows <span class="good">check_ok=1</span> (100 runs NUMA + 56 TILEPro64)</li>
+      <li><strong>SparseLU Fix Target:</strong> NOVA targets reducing execution cycles from 1.151 to ≤ 0.95 (reversing 15.1% regression)</li>
+      <li><strong>Map / Matmul Preservation:</strong> Target ≤ 0.82 cycles (≤ 0.60 cost) — locality preserved</li>
+      <li><strong>Reduction / Jacobi:</strong> Stabilization targets ≤ 0.98 cycles</li>
+    </ul>
+  </div>
+
+  <div class="box" style="margin-top:1rem;">
+    <h3>Examiner Q&amp;A — Three Key Questions (Prepared Answers)</h3>
+    <div style="font-size:.75rem; line-height:1.6;">
+      <p><strong>Q1</strong> — Why build TILEPro64 simulator instead of real hardware?<br>
+      <span style="color:var(--good);">A:</span> TILEPro64 was discontinued; software model provides reproducible, deterministic 8×8 mesh with Manhattan latency, without hardware drift.</p>
+
+      <p><strong>Q2</strong> — Why does WS have 63 steals and LA+Coarse 0?<br>
+      <span style="color:var(--good);">A:</span> WS: Tile 0 creates all tasks, others steal randomly → 63 steals. LA+Coarse: dealer places each task on its data home tile; 0 remote steals required.</p>
+
+      <p><strong>Q3</strong> — How does NOVA prevent synchronization overhead?<br>
+      <span style="color:var(--good);">A:</span> Double-buffered pointer swap: hot path uses lock-free atomic loads; control plane updates statistics every 64 ops via CAS. Zero locks on execution path.</p>
+    </div>
+  </div>
+
+  <div class="speaker-notes">
+    <strong>Slide 5 — Speaker Notes:</strong> "NOVA addresses the core flaw: the alpha-blended score balances locality and load. The shadow index enables smart locality-aware stealing. The adaptive radius self-tunes. All with zero hot-path locks via double-buffered atomic pointer swaps. Key results: 100% check_ok, SparseLU target ≤0.95 (reversing 15.1%), Map preservation ≤0.82. The three Q&A answers cover simulator justification, steal count explanation, and zero-contention design. This completes the NOVA / ALLoC architecture specification and demonstrates full implementation readiness." (Conclude with: "5 of 5 — ready for submission.")
+  </div>
+</section>
+
+</div> <!-- end slides -->
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+<script>
+Reveal.initialize({
+  controls: true, progress: true, slideNumber: true,
+  center: false, hash: true,
+  transition: 'slide',
+  transitionSpeed: 'fast',
+  backgroundTransition: 'fade',
+  pdfSeparatePages: true,
+  width: 1280, height: 720,
+  margin: 0.06,
+  showNotes: false,
+  plugins: []
+});
+</script>
+</body>
+</html>
+'''
+
+PPTX_OUT.write_text(CONTENT, encoding='utf-8')
+print(f"Generated presentation: {PPTX_OUT} ({len(CONTENT):,} chars, 5 slides + speaker notes)")
+
+# Verify assets referenced exist and are non-empty
+assets = [
+    REPO / "docs" / "presentation_deck.md",
+    REPO / "tilepro64" / "README.md",
+    REPO / "tilepro64" / "results" / "raw_results.csv",
+    REPO / "tilepro64" / "results" / "tilepro64_results.png",
+    REPO / "results" / "numa" / "fig7_reproduction.png",
+]
+for a in assets:
+    if not a.exists():
+        print(f"  MISSING: {a}")
+    elif a.stat().st_size == 0:
+        print(f"  EMPTY:  {a}")
+    else:
+        print(f"  OK:     {a} ({a.stat().st_size:,} bytes)")

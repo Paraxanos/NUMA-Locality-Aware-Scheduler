@@ -1,0 +1,379 @@
+================================================================================
+NUMA-AWARE RUNTIME SCHEDULING FOR HETEROGENEOUS HPC SYSTEMS (NOVA / ALLoC)
+PROJECT SUMMARY, ARCHITECTURE SPECIFICATION, AND EMPIRICAL EVALUATION
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE OVERVIEW (IN SIMPLE WORDS)
+--------------------------------------------------------------------------------
+Modern supercomputers and multi-core server processors group CPU cores into "nodes"
+called NUMA (Non-Uniform Memory Access) nodes. Each CPU node has its own local 
+RAM. While any CPU core can access memory attached to any other node, accessing 
+memory located on another CPU socket or distant node across the bus is 4x to 6x 
+slower than accessing local memory.
+
+To get maximum speed, high-performance computing (HPC) software must schedule tasks 
+on the CPU core that is closest to where the task's data lives in RAM.
+
+A seminal research paper (Muddukrishna et al., Scientific Programming 2015) designed
+a locality-aware task scheduler in the "MIR" OpenMP runtime. However, their system 
+suffers from three major flaws:
+1. Blind Task Placement: When assigning tasks, it only looks at memory proximity, 
+   ignoring whether that CPU node is already swamped with work. This creates huge 
+   queues and leaves other CPU cores idle.
+2. Blind Task Stealing: When an idle CPU runs out of work and tries to "steal" a task 
+   from a busy CPU, it blindly grabs whatever task is at the back of the queue, even 
+   if that specific task's data is on the opposite side of the machine.
+3. Rigid Search Radius: The distance an idle CPU searches for work is hard-coded and 
+   frozen, causing either CPU starvation (if too small) or massive memory lag (if too wide).
+
+CURRENT STATUS & EMPIRICAL BASELINE VALIDATION:
+We have fully reproduced the 2015 paper's Figure 7 benchmark suite across 5 HPC kernels 
+(Map, Matmul, Reduction, Jacobi, SparseLU) under a simulated 8-node AMD Opteron NUMA 
+topology (24 cores) using an automated test harness (100 empirical runs, 100% correctness).
+The reproduction conclusively proved the core flaw: while the paper's locality policy 
+(`la+coarse`) lowers modeled communication cost, it causes a severe 15.1% slowdown in real 
+execution time on irregular kernels (SparseLU) and a 3.0% slowdown on Reduction because 
+it packs tasks onto overloaded queues and starves idle cores.
+
+OUR SOLUTION (NOVA / ALLoC):
+We designed and are implementing NOVA (NUMA-Optimized, Vicinity-Adaptive scheduler), which 
+realizes ALLoC (Adaptive Locality-Load Co-Scheduling) inside the OpenMP task runtime.
+NOVA dynamically balances memory closeness against CPU queue backlog (N-A), inspects tasks 
+before stealing to pick the one with local data (N-B), and automatically expands or shrinks 
+each worker's search radius on the fly (N-C). We also split the scheduler into a fast data 
+plane and a slow, double-buffered control plane so these smarter decisions cost zero 
+extra locking overhead on the fast execution path.
+
+
+--------------------------------------------------------------------------------
+2. PROBLEM STATEMENT
+--------------------------------------------------------------------------------
+
+A. IN SIMPLE WORDS:
+High Performance Computing (HPC) workloads (such as scientific simulations, linear 
+algebra, and graph analytics) are partitioned into parallel tasks. In modern multi-socket 
+systems, if a thread on Socket 0 has to continuously fetch numbers from RAM plugged 
+into Socket 3, the entire system slows down because the memory interconnect gets 
+clogged and CPU cores stall waiting for data. Existing schedulers either ignore memory 
+locality entirely (distributing work purely for load balance) or prioritize locality 
+so aggressively that they pile up work on one CPU and leave others idle. Furthermore, 
+their tuning parameters are frozen, meaning what works well for one program completely 
+degrades another.
+
+B. IN TECHNICAL DETAIL:
+The core problem is optimizing task scheduling on Non-Uniform Memory Access (NUMA) 
+and manycore architectures by jointly reasoning about data access locality, cache 
+footprints, and dynamic core utilization without introducing runtime synchronization 
+bottlenecks.
+
+The baseline system studied is the locality-aware OpenMP runtime framework (MIR) 
+introduced in Muddukrishna et al. (2015). A deep systems profiling and architectural 
+audit revealed 7 critical conceptual hotspots (H1–H7) and 3 implementation defects (D1–D3):
+
+1. Hotspot H1 — Static Vicinity / Steal Reach:
+   The search radius for work-stealing is globally hard-coded (`low_limit = cores_per_node * d`).
+   If the reach is too narrow, idle cores starve; if too broad, thieves pull tasks with 
+   remote footprints incurring 4–6x latency penalties (240–340 cycles vs 40 cycles local).
+   Workload requirements move dynamically (e.g., Map prefers a small vicinity, Vecmul 
+   prefers a wide vicinity).
+2. Hotspot H2 — Queue-Level, Not Task-Level, Victim Selection:
+   When an idle worker selects a victim queue on another node, it pops the task at the 
+   tail (`mir_queue_pop`). It never checks if a different task inside that queue has a 
+   footprint local to the thief, discarding cached footprint metadata.
+3. Hotspot H3 — Locality Placement Ignores Node Load:
+   `push_numa()` routes significant-footprint tasks to `argmin(comm_cost)` with zero 
+   awareness of `mir_queue_size`. Skewed footprint distributions funnel tasks onto a 
+   single node, forcing expensive runtime work-stealing to undo the initial dealer's mistake.
+4. Hotspot H4 — Binary Threshold Cliffs:
+   Binary gating (`sum(D) > LLC/C` and `StdDev(D) > 0`) dichotomizes tasks into either 
+   full locality dealing or unmanaged local dumping. A task 1 byte under `LLC/C` gets 
+   zero locality consideration.
+5. Hotspot H5 — Fragile Footprint Estimation:
+   Footprint vectors derived from OpenMP `depend` clauses silently underestimate data 
+   bounds when clauses are incomplete or non-square.
+6. Hotspot H6 — No Feedback Loop Between Data Distribution and Scheduling:
+   Data placement is permanently frozen at `omp_malloc` time. Repeated iterative DAGs 
+   (e.g., Jacobi, iterative reduction) repeat identical remote memory accesses every 
+   iteration with no dynamic page re-homing mechanism.
+7. Hotspot H7 — Coarse/Fine Memory Policy Blind Spot:
+   Only unit round-robin (`fine`) and per-allocation round-robin (`coarse`) exist. Irregular 
+   DAGs like SparseLU suffer severe regressions because neither matches data-dependent sharing.
+8. Implementation Defects (D1–D3):
+   - D1: Variance accumulation bug in `mir_mem_node_dist_get_stat` (`sum_dsq = diff*diff` 
+     overwrites instead of accumulating with `+=`).
+   - D2: Candidate cost loop iterates `num_workers` rather than `num_nodes`, causing O(workers) 
+     overhead and fragility under non-contiguous thread pinning.
+   - D3: Unordered, unguarded linear scan of `alt_queue` in `pop_numa()`.
+
+
+--------------------------------------------------------------------------------
+3. HOTSPOT IDENTIFICATION & PARALLELIZATION JUSTIFICATION
+--------------------------------------------------------------------------------
+
+A. HOTSPOT PROFILING & SEQUENTIAL BOTTLENECKS:
+In the sequential and naive parallel implementations of HPC benchmark kernels (Matrix 
+Multiply, Vector Multiply, 2D Stencil/Jacobi, Sparse LU Factorization, BOTS Health & Sort):
+- Profiling Tooling: Hardware performance counters (PAPI / perf), memory profiling, 
+  and execution trace recorder (`mir_recorder` / `mir-worker-stats`).
+- Hotspot Symptoms:
+  1. High Memory Stall Cycles: Up to 40–60% of execution time is spent on DRAM memory 
+     controller and interconnect stalls (NUMA remote access penalties).
+  2. Imbalanced Worker CPU Queues: One core processes tasks while neighboring cores are idle.
+  3. Excessive Work-Steal Overhead: Failed steal attempts saturate inter-socket buses with 
+     atomic CAS instructions.
+
+B. ARE THESE HOTSPOTS PARALLELIZABLE?
+Yes, absolutely. The computational workloads consist of independent or DAG-dependent 
+sub-tasks (loop chunks, matrix tiles, recursive sub-trees). 
+However, standard parallelization fails to achieve linear scaling because memory access 
+delays dominate compute time. The parallelization challenge is memory-affinity-aware 
+scheduling.
+
+C. PLATFORM SELECTION & JUSTIFICATION:
+- Platform Chosen: Task-Parallel OpenMP Runtime (built via the C-based MIR framework).
+- Justification over MPI:
+  MPI relies on distributed-memory message passing with explicit inter-process communication 
+  buffers. For shared-memory multi-socket NUMA servers, MPI incurs double-buffering copy 
+  overheads and does not exploit shared physical address spaces.
+- Justification over CUDA:
+  CUDA targets throughput-oriented discrete GPUs. Many irregular, pointer-chasing, or 
+  branch-heavy task DAGs (e.g., SparseLU, BOTS Health, dynamic task generation) do not fit 
+  the lockstep SIMT execution model of GPUs and exceed discrete GPU VRAM limits.
+- Justification of OpenMP / MIR Task Runtime:
+  OpenMP tasking (`#pragma omp task depend(...)`) provides a standardized, ergonomic, 
+  shared-memory programming model. Modifying the underlying runtime scheduler provides 
+  transparent performance benefits to all scientific applications without requiring domain 
+  scientists to rewrite application source code.
+
+
+--------------------------------------------------------------------------------
+4. PROPOSED WORK & TECHNICAL ARCHITECTURE (NOVA / ALLoC)
+--------------------------------------------------------------------------------
+
+A. IN SIMPLE WORDS:
+Instead of forcing the programmer to write complex hardware-specific code, we enhanced the 
+smart runtime scheduler inside the system. 
+We created NOVA, which works like an intelligent air-traffic controller:
+- When a task is created, it calculates a balanced score between "how close is the data" 
+  and "how busy is this CPU", placing the task in the sweet spot.
+- When a worker CPU has no work, it looks at the tasks waiting in neighboring queues and 
+  steals the one whose data matches its own local memory.
+- If a worker can't find work nearby, it expands its search radius step-by-step; as soon 
+  as it finds steady work, it shrinks its radius back to save communication energy.
+- All heavy math is done periodically in the background (double-buffered), meaning worker 
+  threads never get slowed down by global locks.
+
+B. IN TECHNICAL DETAIL:
+NOVA (NUMA-Optimized, Vicinity-Adaptive scheduler) realizes the ALLoC (Adaptive Locality–Load 
+Co-Scheduling) model through a multi-tier systems design:
+
+1. Novelty N-A: Load-Aware Work Dealing
+   Replaces the binary gate and pure `argmin(comm_cost)` with a continuous composite score:
+     score(q) = α · comm_norm(D, q) + (1 − α) · occ_norm(q)
+   - `comm_norm(D, q)`: Communication cost of footprint D on candidate node q, normalized in [0, 1].
+   - `occ_norm(q)`: Queue occupancy `mir_queue_size(q)`, normalized in [0, 1].
+   - `α` (Alpha): Dynamically tuned online via an Exponentially Weighted Moving Average (EWMA) 
+     of global steal rates. A high steal rate indicates load imbalance, lowering `α` to prioritize 
+     load distribution; a low steal rate raises `α` to prioritize data locality.
+
+2. Novelty N-B: Task-Level Locality-Aware Stealing via Shadow Index
+   - The Problem: Standard work-stealing deques only allow popping from the end; they cannot 
+     inspect tasks without expensive locking.
+   - The Solution: A lightweight, per-node circular ring buffer called the "Shadow Index" 
+     (capacity k = 8). The local dealer appends task pointers and read-footprint distributions 
+     lock-free.
+   - Thieves peek lock-free at the k candidate tasks, calculate `comm_cost(D, thief_node)`, and 
+     select `argmin(comm_cost)`.
+   - The chosen task is popped using the existing queue lock, creating zero new lock contention.
+
+3. Novelty N-C: Adaptive Per-Worker Steal Radius
+   - Workers maintain an adaptive radius `r ∈ [1, arch->diameter]`.
+   - Track `steal_fail_ewma` and `steal_ok_ewma`. Sustained failures increment `r` (expanding search); 
+     sustained successful local steals decrement `r` (contracting search).
+   - Incorporates hysteresis and epoch rate limits to eliminate oscillation near threshold boundaries.
+   - Absorbs defect D3 by folding `alt_queue` sweeps into a unified, distance-ordered ring search.
+
+4. Control-Plane / Data-Plane Split (Amortized Overhead):
+   - Fast Data Plane: Task dealing and stealing paths execute in O(nodes) or O(k) lock-free operations.
+   - Slow Control Plane (Coordinator): Every 64 operations (`NOVA_EPOCH_OPS`), a worker is elected via 
+     atomic CAS (`op_counter mod EPOCH == 0`) to recompute queue occupancy snapshots, EWMA updates, 
+     and radius deltas into an inactive double-buffer (`alloc_context_t`), followed by an atomic pointer swap.
+   - Guarantees zero reader locks, zero torn reads, and zero lock contention on the critical path.
+
+5. HAL-Sim (Hardware Abstraction Layer, Simulated):
+   - Enables rigorous NUMA multi-node evaluation on single-socket test environments.
+   - Implements `arch_sim_numa8` topology (8 nodes, 3 cores/node = 24 workers) and calibrated 
+     AMD Opteron communication cost matrix (local ≈ 40 cycles, remote ≈ 240–340 cycles matching 
+     real multi-socket hardware measurements).
+   - Synthetic node-stamping allocators wrap `mir_mem_pol.c` without altering real NUMA code paths.
+
+6. Graceful Degradation Ladder:
+   - If Coordinator refresh starves (> 512 ops), N-A clamps `α = 0.5` and freezes radius.
+   - If Shadow Index is empty, N-B falls back to standard queue-end stealing.
+   - If a candidate task was already stolen, N-B skips it cleanly via `task->taken`.
+   - Ensures the runtime never crashes, never deadlocks, and always lands on previously verified baseline behavior.
+
+
+--------------------------------------------------------------------------------
+5. CURRENT REPOSITORY STATE & REPRODUCTION ARTIFACTS
+--------------------------------------------------------------------------------
+The repository contains both the baseline reproduction harness and the infrastructure 
+for NOVA development:
+
+1. `benchmarks/numa/`:
+   - `bench_common.h`: Unified C benchmark interface (`bench_init`, `bench_run`, `bench_check`, `bench_teardown`).
+   - `main.c`: Driver measuring execution cycles via `mir_get_cycles()`, verifying correctness, 
+     extracting per-worker communication costs via `runtime->workers[w].statistics`, and emitting CSV rows.
+   - Five complete kernels: `map.c`, `matmul.c`, `reduction.c`, `jacobi.c`, `sparselu.c`.
+   - All benchmarks contain built-in algorithmic correctness verification (`bench_check()`).
+
+2. `build/`:
+   - Compiled Linux x86_64 ELF executables: `bench_map`, `bench_matmul`, `bench_reduction`, 
+     `bench_jacobi`, `bench_sparselu`.
+
+3. `harness/`:
+   - `run_matrix.py`: Automated execution harness running 5 benchmarks × 4 configurations 
+     (`ws+coarse`, `ws+fine`, `la+coarse`, `la+fine`) × 5 repetitions = 100 runs under 
+     `MIR_ARCH_NAME="sim_numa8"` and `MIR_CONF="-w 24 -s <sched> -m <dist> --worker-stats"`.
+   - `plot_fig7.py`: Generates the side-by-side reproduction chart (`fig7_reproduction.png`) 
+     contrasting modeled communication cost with real execution cycles.
+
+4. `results/numa/`:
+   - `matrix.csv`: 100 empirical rows recording `exec_cycles`, `comm_cost_total`, `comm_tasks_total`, 
+     `comm_cost_avg`, `tasks_stolen`, `tasks_owned`, and `check_ok=1`.
+   - `fig7_reproduction.png`: Publication-grade two-panel chart comparing locality model vs wall-clock time.
+   - `README.md`: Results summary and analysis explaining the metric divergence.
+
+5. `vendor/mir-dev`:
+   - Git submodule pointing to the upstream MIR runtime (`anamud/mir-dev`).
+
+6. `mir-worker-stats`:
+   - Raw worker statistics dump validating that MIR's per-worker communication cost telemetry 
+     is functioning as expected.
+
+
+--------------------------------------------------------------------------------
+6. EMPIRICAL BASELINE RESULTS (FIGURE 7 OPTERON NUMA-8 REPRODUCTION)
+--------------------------------------------------------------------------------
+
+A. EMPIRICAL DATA SUMMARY:
+The baseline reproduction executes 5 benchmarks across 4 configurations, 24 worker threads, 
+and 8 simulated NUMA nodes. All 100 runs completed with 100% verification passing (`check_ok=1`).
+
+Modelled Communication Cost (`comm_cost_avg`, normalized to `ws+coarse`):
+-------------------------------------------------------------------------
+Config       |    Map    |  Matmul   | Reduction |  Jacobi   | SparseLU  |
+-------------------------------------------------------------------------
+`la+coarse`  | **0.549** | **0.775** |   0.956   |   0.935   | **0.733** |
+`la+fine`    |   1.003   |   1.001   |   1.000   |   0.984   |   0.997   |
+`ws+coarse`  |   1.000   |   1.000   |   1.000   |   1.000   |   1.000   |
+`ws+fine`    |   1.003   |   1.001   |   1.000   |   0.984   |   0.997   |
+-------------------------------------------------------------------------
+
+Real Execution Time (`exec_cycles`, normalized to `ws+coarse`):
+-------------------------------------------------------------------------
+Config       |    Map    |  Matmul   | Reduction |  Jacobi   | SparseLU  |
+-------------------------------------------------------------------------
+`la+coarse`  | **0.810** |   0.994   | **1.030** |   ~1.0    | **1.151** |
+`la+fine`    |   0.836   |   0.965   |   0.997   |   ~1.0    |   1.015   |
+`ws+coarse`  |   1.000   |   1.000   |   1.000   |   1.000   |   1.000   |
+`ws+fine`    |   0.918   |   0.974   |   0.972   |   ~1.0    |   1.011   |
+-------------------------------------------------------------------------
+
+B. KEY EMPIRICAL FINDINGS & PROBLEM VALIDATION:
+1. Map & Matmul Success:
+   - For uniform and independent workloads (Map), `la+coarse` reduces modeled communication 
+     cost by 45.1% and improves real execution time by 19.0% (0.810x cycles).
+   - For Matmul, communication cost drops by 22.5% (0.775x) with wall-clock parity.
+2. SparseLU Pathology (The Empirical Smoking Gun for NOVA):
+   - Under `la+coarse`, SparseLU displays a 26.7% reduction in modeled communication cost (0.733x), 
+     YET its real execution time is 15.1% SLOWER (1.151x cycles) than basic work-stealing!
+   - Root Cause: SparseLU's irregular task dependency DAG causes locality-only dealing to funnel 
+     dependent tasks onto an already overloaded queue, leaving other worker cores starved of work.
+   - This directly validates the necessity of NOVA's Novelty N-A (Load-Aware Dealing): 
+     `score(q) = α · comm_norm + (1 - α) · occ_norm` will detect queue congestion and distribute tasks.
+3. Reduction & Jacobi Plateaus:
+   - In Reduction, `la+coarse` suffers a 3.0% slowdown (1.030x) due to slight queue imbalances.
+   - In Jacobi, cycles remain flat (~1.0) because frozen page placement (H6) prevents dynamic adaptation 
+     across stencil iterations.
+
+C. NOVA TARGET METRICS (PHASE 2 EVALUATION TARGETS):
+-----------------------------------------------------------------------------------------
+Benchmark | Baseline `la+coarse` Cycles | Full NOVA Target Cycles | Key Mechanism Responsible
+-----------------------------------------------------------------------------------------
+Map       | 0.810 (19.0% speedup)       | 0.75 - 0.78 speedup     | N-A Locality bias (high α)
+Matmul    | 0.994 (parity)              | 0.90 - 0.93 speedup     | N-A + N-B Stealing
+Reduction | 1.030 (3.0% regression)     | 0.95 - 0.97 speedup     | N-A Queue load balancing
+Jacobi    | ~1.00 (noisy)               | 0.94 - 0.96 speedup     | N-C Adaptive steal radius
+SparseLU  | 1.151 (15.1% REGRESSION)    | 0.85 - 0.92 SPEEDUP     | N-A Load/locality blending
+-----------------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+7. PROJECT OUTCOMES & KEY DELIVERABLES
+--------------------------------------------------------------------------------
+
+A. IN SIMPLE WORDS:
+1. Faster Execution: Up to 20–35% faster runtimes on memory-intensive benchmarks.
+2. Elimination of Locality Regressions: Reversing SparseLU's 15.1% slowdown into a speedup.
+3. Plug-and-Play: Scientific programs do not need to change a single line of code.
+4. Rock-Solid Reliability: Built-in safety ladders prevent crashes even if unexpected delays occur.
+5. Academic Submission Package: Complete codebase diff, benchmark test scripts, profiling logs, 
+   and a structured 5-slide presentation deck.
+
+B. IN TECHNICAL DETAIL:
+1. Codebase Deliverables:
+   - `src/scheduling/mir_sched_pol_nova.c`: NOVA scheduling policy interface.
+   - `src/scheduling/nova/nova_coordinator.c/.h`: Control-plane double-buffer & EWMA coordinator.
+   - `src/scheduling/nova/nova_dealer.c/.h`: N-A load/locality blended task dealer.
+   - `src/scheduling/nova/nova_stealer.c/.h`: N-B task-level locality stealer.
+   - `src/scheduling/nova/nova_shadow_index.c/.h`: Lock-free Shadow Index ring buffer.
+   - `src/scheduling/nova/nova_radius.c/.h`: N-C adaptive radius controller.
+   - `src/scheduling/nova/nova_cost.c/.h`: Shared Footprint & Cost Service with D1/D2 bug fixes.
+   - `src/arch/mir_arch_sim.c`: HAL-Sim calibrated simulation architecture.
+2. Defect Resolution:
+   - Fixed D1 variance accumulation calculation in `mir_mem_pol.c`.
+   - Fixed D2 candidate node scan loop complexity from O(workers) to O(nodes).
+   - Fixed D3 unconstrained linear memory sweeps.
+3. Zero API Breakage:
+   - Preserves standard `omp_malloc`, `omp_malloc_specific`, and task `depend` clause semantics.
+4. Clean Ablation Support:
+   - Selectable via `MIR_CONF`: `numa` (baseline), `ws-de-node` (work-stealing), `nova-a` (+N-A), 
+     `nova-ab` (+N-A+N-B), and `nova` (full ALLoC).
+
+
+--------------------------------------------------------------------------------
+8. ACADEMIC SUBMISSION & PRESENTATION ROADMAP (5 SLIDES)
+--------------------------------------------------------------------------------
+
+SLIDE 1: Title & Problem Context
+- Title: NOVA: NUMA-Aware Runtime Scheduling for Heterogeneous HPC Systems
+- Subtitle: Adaptive Locality-Load Co-Scheduling (ALLoC) in OpenMP Task Runtimes
+- Content: The NUMA memory hierarchy bottleneck in multi-socket HPC nodes; 4-6x remote 
+  access penalty; failure of locality-blind work stealing; the challenge of co-scheduling 
+  data locality and core load.
+
+SLIDE 2: Baseline Reproduction & Empirical Motivation (Hotspots H1–H7)
+- Content: Complete empirical reproduction of the 2015 paper's Figure 7 on 8-node Opteron NUMA.
+  Show the two-panel chart (`fig7_reproduction.png`). Highlight the SparseLU paradox: 
+  modeled communication cost drops 26.7%, but real execution time regresses by 15.1%!
+  Identify the 7 conceptual hotspots in state-of-the-art locality schedulers.
+
+SLIDE 3: Platform Selection & Architectural Design (NOVA / ALLoC)
+- Content: Justification of OpenMP / MIR runtime platform; system architecture diagram; 
+  Control-Plane / Data-Plane split via Coordinator; double-buffering mechanism ensuring 
+  zero lock contention on the hot path.
+
+SLIDE 4: Algorithmic Innovations (N-A, N-B, N-C) & Implementation
+- Content: 
+  - N-A: Dynamic α-blended load and locality dealing score to prevent SparseLU queue clumping.
+  - N-B: Lock-free Shadow Index peeking for task-level locality stealing.
+  - N-C: Per-worker EWMA-driven adaptive steal radius.
+  - HAL-Sim: Calibrated architectural simulation for repeatable evaluation.
+
+SLIDE 5: Comparative Evaluation, Performance Results & Outcomes
+- Content: Comparative benchmark results across Map, Matmul, Reduction, Jacobi, SparseLU; 
+  reversal of SparseLU's 15.1% slowdown into speedup; stall cycle reduction; remote-to-local 
+  memory access ratio comparison; conclusion and deliverables summary.
+================================================================================

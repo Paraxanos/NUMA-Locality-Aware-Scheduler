@@ -20,6 +20,9 @@ CONFIGS = [
     ("ws", "ws-de-node", "fine", "fine"),
     ("la", "numa", "coarse", "coarse"),
     ("la", "numa", "fine", "fine"),
+    # NOVA Full & Ablations:
+    ("nova", "nova", "coarse", "coarse"),
+    ("nova", "nova", "fine", "fine"),
 ]
 REPS = 5
 WORKERS = 24
