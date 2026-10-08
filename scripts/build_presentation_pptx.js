@@ -86,7 +86,7 @@ function addHeaderBadges(slide, partText, topicText) {
 }
 
 // Helper: Add Slide Footer
-function addFooter(slide, footerText, slideNum, totalSlides = '06') {
+function addFooter(slide, footerText, slideNum, totalSlides = '05') {
   slide.addText(footerText, {
     x: 0.8, y: 6.95, w: 9.0, h: 0.35,
     fontSize: 9.5, fontFace: 'Courier New', color: C.inkMuted, valign: 'middle'
@@ -492,68 +492,70 @@ function addCalloutBanner(slide, { x, y, w, h, titleText, bodyText }) {
     fontFace: 'Courier New', fontSize: 10, color: C.inkMuted
   });
 
-  // LEFT COLUMN: AMD Opteron NUMA Figure 7 Reproduction
-  addNeoCard(slide, { x: 0.8, y: 1.95, w: 6.0, h: 4.85, fill: C.cardWhite, radius: 0.16 });
-  slide.addText('AMD Opteron Reproduction (100 Runs, 100% Verification)', {
-    x: 1.0, y: 2.1, w: 5.6, h: 0.28, fontFace: 'Arial Black', fontSize: 11.5, color: C.ink
+  // Two side-by-side cards: Left = NUMA Fig 7, Right = TILEPro64 Mesh Chart
+  const cardW = 5.75;
+  const cardH = 4.3;
+
+  // Left Card: AMD Opteron NUMA Figure 7 Reproduction
+  addNeoCard(slide, { x: 0.8, y: 1.95, w: cardW, h: cardH, fill: C.cardWhite, radius: 0.14 });
+  slide.addText('1. AMD Opteron NUMA Reproduction (100 Runs)', {
+    x: 1.0, y: 2.1, w: cardW - 0.4, h: 0.28, fontFace: 'Arial Black', fontSize: 13, color: C.ink
   });
 
   if (fs.existsSync(FIG7_PATH)) {
     slide.addImage({
       path: FIG7_PATH,
-      x: 1.0, y: 2.45, w: 5.6, h: 2.7
+      x: 1.0, y: 2.45, w: cardW - 0.4, h: 2.65
     });
   }
 
   // Key NUMA takeaways below chart
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 1.0, y: 5.25, w: cardW - 0.4, h: 0.75, fill: { color: C.cardPeach }, rectRadius: 0.08, line: { color: C.ink, width: 1.0 }
+  });
   slide.addText([
     { text: '• Map: ', options: { bold: true, color: C.ink } },
-    { text: '-45.1% Comm Cost (0.55×) · -19.0% Execution Cycles (0.81×)\n', options: { color: '047857', bold: true } },
-    { text: '• Matmul: ', options: { bold: true, color: C.ink } },
-    { text: '-22.5% Comm Cost (0.78×) · Runtime Parity (Balanced)\n', options: { color: C.inkLight } },
-    { text: '• SparseLU: ', options: { bold: true, color: C.ink } },
-    { text: '-26.7% Comm Cost BUT +15.1% SLOWER Execution! (The Paradox)', options: { color: 'B91C1C', bold: true } }
+    { text: '-45.1% Comm Cost · -19.0% Execution Cycles\n', options: { color: '047857', bold: true } },
+    { text: '• SparseLU: ', options: { bold: true, color: 'B91C1C' } },
+    { text: '-26.7% Comm BUT +15.1% SLOWER Execution! (Paradox)', options: { color: 'B91C1C', bold: true } }
   ], {
-    x: 1.0, y: 5.25, w: 5.6, h: 1.4, fontFace: 'Arial', fontSize: 9.5
+    x: 1.1, y: 5.28, w: cardW - 0.6, h: 0.68, fontFace: 'Courier New', fontSize: 9.5
   });
 
-  // RIGHT COLUMN: The SparseLU Breakdown + TILEPro64 Results
-  // Card 1: The SparseLU Breakdown (Dark Card)
-  addNeoCard(slide, { x: 7.1, y: 1.95, w: 5.4, h: 2.5, fill: C.cardDark, radius: 0.14 });
-  slide.addText('The SparseLU Pathology Explained', {
-    x: 7.3, y: 2.1, w: 5.0, h: 0.3, fontFace: 'Arial Black', fontSize: 13, color: C.yellow
+  // Right Card: TILEPro64 8×8 Mesh Simulation
+  addNeoCard(slide, { x: 6.8, y: 1.95, w: cardW, h: cardH, fill: C.cardWhite, radius: 0.14 });
+  slide.addText('2. TILEPro64 8×8 Mesh Simulation (64 Cores)', {
+    x: 7.0, y: 2.1, w: cardW - 0.4, h: 0.28, fontFace: 'Arial Black', fontSize: 13, color: C.ink
+  });
+
+  if (fs.existsSync(TILEPRO_PATH)) {
+    slide.addImage({
+      path: TILEPRO_PATH,
+      x: 7.0, y: 2.45, w: cardW - 0.4, h: 2.65
+    });
+  }
+
+  // Key TILEPro64 takeaways below chart
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 7.0, y: 5.25, w: cardW - 0.4, h: 0.75, fill: { color: C.cardGreen }, rectRadius: 0.08, line: { color: C.ink, width: 1.0 }
   });
   slide.addText([
-    { text: '// Why locality dealing caused a +15.1% slowdown:\n', options: { color: '94A3B8', fontSize: 8.5, fontFace: 'Courier New' } },
-    { text: '1. Irregular Task DAG: ', options: { color: 'FFFFFF', bold: true, fontSize: 9 } },
-    { text: 'Tasks have skewed input dependencies.\n', options: { color: 'CBD5E1', fontSize: 9 } },
-    { text: '2. Load-Blind Placement: ', options: { color: 'FFFFFF', bold: true, fontSize: 9 } },
-    { text: 'Dealer sent all critical tasks to Node 0.\n', options: { color: 'CBD5E1', fontSize: 9 } },
-    { text: '3. Worker Starvation: ', options: { color: 'FFFFFF', bold: true, fontSize: 9 } },
-    { text: 'Queue 0 had 20 tasks; Queues 1–7 were empty!\n', options: { color: 'FCA5A5', fontSize: 9, bold: true } },
-    { text: '4. Cost Penalty: ', options: { color: 'FFFFFF', bold: true, fontSize: 9 } },
-    { text: '23 worker cores sat completely idle. Comm win was wiped out by starvation cycles!', options: { color: 'FCA5A5', fontSize: 9 } }
+    { text: '• Map: ', options: { bold: true, color: C.ink } },
+    { text: '-80.3% Comm Drop · 39.3% Speedup\n', options: { color: '047857', bold: true } },
+    { text: '• Steals: ', options: { bold: true, color: C.ink } },
+    { text: '0 Remote Steals in LA+Coarse vs 63 in WS baseline', options: { color: '047857', bold: true } }
   ], {
-    x: 7.3, y: 2.45, w: 5.0, h: 1.85, fontFace: 'Arial'
+    x: 7.1, y: 5.28, w: cardW - 0.6, h: 0.68, fontFace: 'Courier New', fontSize: 9.5
   });
 
-  // Card 2: TILEPro64 Simulator Findings
-  addNeoCard(slide, { x: 7.1, y: 4.6, w: 5.4, h: 2.2, fill: C.cardPeach, radius: 0.14 });
-  slide.addText('TILEPro64 8×8 Mesh Simulation Findings', {
-    x: 7.3, y: 4.75, w: 5.0, h: 0.3, fontFace: 'Arial Black', fontSize: 12.5, color: C.ink
+  // Bottom Callout Banner
+  addCalloutBanner(slide, {
+    x: 0.8, y: 6.4, w: 11.75, h: 0.48,
+    titleText: 'THE EMPIRICAL LAW:',
+    bodyText: 'Locality dealing cuts communication by up to 80.3%, but causes a +15.1% execution slowdown on irregular DAGs without load balancing.'
   });
 
-  const tileResults = [
-    '• 80.3% Communication Reduction: LA+Coarse drops comm cost from 6.67M down to 1.31M cycles on Map.',
-    '• 39.3% Execution Speedup: Simulated runtime drops from 281K down to 170K cycles.',
-    '• Steal Elimination: Drops from 63 remote mesh steals in Work-Stealing down to ZERO steals under LA+Coarse!',
-    '• Mesh Latency Accuracy: Verified against 10-cycle local L2 and 38+2·hop remote formulas across all 64 tiles.'
-  ];
-  slide.addText(tileResults.join('\n'), {
-    x: 7.3, y: 5.1, w: 5.0, h: 1.6, fontFace: 'Arial', fontSize: 9, color: C.inkLight, lineSpacing: 13
-  });
-
-  addFooter(slide, 'Empirical Reproduction: AMD Opteron NUMA & TILEPro64 Manycore Mesh', '04');
+  addFooter(slide, 'Empirical Reproduction: AMD Opteron NUMA & TILEPro64 Manycore Mesh', '04', '05');
 }
 
 // ==========================================
@@ -683,100 +685,7 @@ function addCalloutBanner(slide, { x, y, w, h, titleText, bodyText }) {
     bodyText: 'Maximize memory locality when queues are balanced; dynamically transition to load-balancing when queue backlog or interconnect contention threatens idle core stalls.'
   });
 
-  addFooter(slide, 'NOVA / ALLoC Scheduler Architecture · High-Performance Computing', '05');
-}
-
-// ==========================================
-// SLIDE 6: SUMMARY, DELIVERABLES & DEFENSE Q&A
-// ==========================================
-{
-  const slide = pptx.addSlide();
-  applySlideBase(slide);
-  addHeaderBadges(slide, 'PART 5', 'SUMMARY & DEFENSE READY');
-
-  // Title
-  slide.addText('Project Deliverables & ', {
-    x: 0.8, y: 0.95, w: 6.0, h: 0.55,
-    fontFace: 'Arial Black', fontSize: 30, color: C.ink, bold: true
-  });
-  slide.addShape(pptx.ShapeType.roundRect, {
-    x: 6.6, y: 0.9, w: 5.5, h: 0.65,
-    fill: { color: C.yellow },
-    rectRadius: 0.1,
-    line: { color: C.ink, width: 1.5 }
-  });
-  slide.addText('Examiner Defense Q&A', {
-    x: 6.7, y: 0.9, w: 5.3, h: 0.65,
-    fontFace: 'Arial Black', fontSize: 28, color: C.ink, bold: true, align: 'center', valign: 'middle'
-  });
-
-  slide.addText('Full dual-architecture reproduction, standalone manycore simulator, and NOVA scheduler specification', {
-    x: 0.8, y: 1.6, w: 10.0, h: 0.25,
-    fontFace: 'Courier New', fontSize: 10, color: C.inkMuted
-  });
-
-  // LEFT COLUMN: Concrete Deliverables
-  addNeoCard(slide, { x: 0.8, y: 1.95, w: 5.7, h: 4.85, fill: C.cardWhite, radius: 0.16 });
-  slide.addText('Summary of Concrete Deliverables', {
-    x: 1.0, y: 2.1, w: 5.3, h: 0.35, fontFace: 'Arial Black', fontSize: 15, color: C.ink
-  });
-  slide.addShape(pptx.ShapeType.roundRect, {
-    x: 1.0, y: 2.5, w: 2.2, h: 0.25, fill: { color: C.badgeGreen }, rectRadius: 0.12, line: { color: C.ink, width: 1.0 }
-  });
-  slide.addText('100% COMPLETE & VERIFIED', {
-    x: 1.0, y: 2.5, w: 2.2, h: 0.25, fontSize: 8, fontFace: 'Courier New', bold: true, color: C.ink, align: 'center', valign: 'middle'
-  });
-
-  const deliverables = [
-    '1. AMD Opteron NUMA Baseline Reproduction:',
-    '   100 benchmark runs across 5 kernels (Map, Matmul, Reduce, Jacobi, SparseLU); verified Figure 7 reproduction with check_ok=1.',
-    '',
-    '2. Standalone TILEPro64 8×8 Mesh Simulator:',
-    '   Built full C++/Python mesh simulator from scratch; modeled 10 vs 38+2·hop cycles; 11/11 unit tests passing.',
-    '',
-    '3. Empirical Discovery of SparseLU Paradox:',
-    '   Identified and proved the queue starvation pathology that causes locality dealing to run +15.1% slower than work-stealing.',
-    '',
-    '4. 10-Hotspot Audit Taxonomy (H1–H10):',
-    '   Comprehensive taxonomy covering NUMA steal limits and TILEPro64 2D mesh bisection bottlenecks.',
-    '',
-    '5. Full NOVA / ALLoC Scheduler Architecture:',
-    '   Complete mathematical formulation, shadow index stealing algorithm, and lock-free double-buffered control plane.',
-    '',
-    '6. Open-Source Codebase & Git PR #3:',
-    '   Fully documented and reproducible on branch feat/tilepro64-simulation-and-presentation.'
-  ];
-  slide.addText(deliverables.join('\n'), {
-    x: 1.0, y: 2.85, w: 5.3, h: 3.8, fontFace: 'Arial', fontSize: 8.8, color: C.inkLight, lineSpacing: 12
-  });
-
-  // RIGHT COLUMN: Anticipated Examiner Q&A
-  addNeoCard(slide, { x: 6.8, y: 1.95, w: 5.7, h: 4.85, fill: C.cardDark, radius: 0.16 });
-  slide.addText('Anticipated Examiner Questions & Answers', {
-    x: 7.0, y: 2.1, w: 5.3, h: 0.35, fontFace: 'Arial Black', fontSize: 14, color: C.yellow
-  });
-  slide.addShape(pptx.ShapeType.roundRect, {
-    x: 7.0, y: 2.5, w: 2.0, h: 0.25, fill: { color: C.inkLight }, rectRadius: 0.12, line: { color: C.yellow, width: 1.0 }
-  });
-  slide.addText('EXAMINER DEFENSE READY', {
-    x: 7.0, y: 2.5, w: 2.0, h: 0.25, fontSize: 8, fontFace: 'Courier New', bold: true, color: C.yellow, align: 'center', valign: 'middle'
-  });
-
-  const qaText = [
-    { text: 'Q1: Why simulate TILEPro64 instead of running on real hardware?\n', options: { color: 'FFFFFF', bold: true, fontSize: 9.5 } },
-    { text: 'Ans: TILEPro64 is discontinued specialty hardware. A software model implementing the exact 8×8 mesh and 2D Manhattan latency matrix (10 cycles local, 38+2·hop remote) enables deterministic, cycle-accurate evaluation without hardware drift.\n\n', options: { color: 'CBD5E1', fontSize: 9 } },
-    { text: 'Q2: Why does work-stealing suffer 63 steals in Map while LA+Coarse has 0?\n', options: { color: 'FFFFFF', bold: true, fontSize: 9.5 } },
-    { text: 'Ans: In work-stealing, Tile 0 creates all 64 tasks; the other 63 idle tiles must each steal remotely across the mesh. Under LA+Coarse, the dealer immediately routes each task to its home tile, eliminating steal overhead entirely.\n\n', options: { color: 'CBD5E1', fontSize: 9 } },
-    { text: 'Q3: How does NOVA avoid lock contention on the critical path?\n', options: { color: 'FFFFFF', bold: true, fontSize: 9.5 } },
-    { text: 'Ans: Workers make dealing and stealing decisions locally in O(nodes) time without locks. Global queue snapshots and α tuning run in a double-buffer swapped via atomic pointer CAS every 64 ops — zero locks on the hot execution path.\n\n', options: { color: 'CBD5E1', fontSize: 9 } },
-    { text: 'Q4: What is the main takeaway for future HPC runtimes?\n', options: { color: 'FFFFFF', bold: true, fontSize: 9.5 } },
-    { text: 'Ans: Memory locality and load balance cannot be optimized independently. Adaptive co-scheduling is strictly necessary for scalable speedup.', options: { color: C.yellow, bold: true, fontSize: 9 } }
-  ];
-  slide.addText(qaText, {
-    x: 7.0, y: 2.85, w: 5.3, h: 3.8, fontFace: 'Arial'
-  });
-
-  addFooter(slide, 'Locality-Aware Task Scheduling · Final Project Defense', '06');
+  addFooter(slide, 'NOVA / ALLoC Scheduler Architecture · High-Performance Computing', '05', '05');
 }
 
 // Generate the PPTX file

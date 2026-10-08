@@ -418,42 +418,28 @@
     <div class="slide-subtitle">100 NUMA runs on 8-node Opteron + 56 configurations on 64-tile TILEPro64 mesh simulator</div>
   </div>
 
-  <div style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 32px; flex: 1; margin-bottom: 16px;">
+  <div class="grid-2" style="margin-bottom: 14px;">
     <!-- Left Column: Figure 7 Reproduction Chart -->
-    <div class="card" style="padding: 22px; display: flex; flex-direction: column;">
-      <div style="font-weight: 700; font-size: 19px; margin-bottom: 10px;">AMD Opteron Reproduction (100 Runs, 100% Verification)</div>
-      <img src="../results/numa/fig7_reproduction.png" style="width: 100%; border-radius: 10px; border: 1.5px solid #111827; margin-bottom: 14px;" alt="NUMA Reproduction Chart">
-      <div style="font-size: 15.5px; line-height: 1.55;">
-        • <strong style="color: #047857;">Map:</strong> -45.1% Comm Cost (0.55×) · -19.0% Execution Cycles (0.81×)<br>
-        • <strong>Matmul:</strong> -22.5% Comm Cost (0.78×) · Runtime Parity (Balanced)<br>
-        • <strong style="color: #DC2626;">SparseLU:</strong> -26.7% Comm Cost BUT +15.1% SLOWER Execution! (The Paradox)
+    <div class="card" style="padding: 20px; display: flex; flex-direction: column;">
+      <div style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">1. AMD Opteron NUMA Reproduction (100 Runs)</div>
+      <img src="../results/numa/fig7_reproduction.png" style="width: 100%; border-radius: 8px; border: 1.5px solid #111827; margin-bottom: 10px;" alt="NUMA Reproduction Chart">
+      <div style="font-size: 14px; line-height: 1.45; font-family: 'JetBrains Mono', monospace;">
+        • <strong style="color: #047857;">Map:</strong> −45.1% Comm · −19.0% Cycles &nbsp;|&nbsp; <strong style="color: #DC2626;">SparseLU:</strong> +15.1% SLOWER (Paradox!)
       </div>
     </div>
 
-    <!-- Right Column: SparseLU Breakdown + TILEPro64 -->
-    <div style="display: flex; flex-direction: column; gap: 20px;">
-      <!-- SparseLU Pathology Box -->
-      <div class="card card-dark" style="padding: 24px;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 21px; font-weight: 700; color: #FFD147; margin-bottom: 12px;">The SparseLU Pathology Explained</div>
-        <div class="code-box" style="box-shadow: none; border-color: #334155; font-size: 14px;">
-          <span class="comment">// Why locality dealing caused a +15.1% slowdown:</span><br>
-          1. <strong>Irregular Task DAG:</strong> Tasks have skewed input dependencies.<br>
-          2. <strong>Load-Blind Placement:</strong> Dealer sent all critical tasks to Node 0.<br>
-          3. <span class="warn">Worker Starvation: Queue 0 had 20 tasks; Queues 1–7 were empty!</span><br>
-          4. <span class="warn">23 worker cores sat idle. Comm win was wiped out by starvation!</span>
-        </div>
-      </div>
-
-      <!-- TILEPro64 Simulator Box -->
-      <div class="card card-peach" style="padding: 24px; flex: 1;">
-        <div class="card-title" style="font-size: 21px; margin-bottom: 12px;">TILEPro64 8×8 Mesh Simulation Findings</div>
-        <ul class="spec-list" style="font-size: 15px; gap: 10px;">
-          <li>• <strong style="color: #047857;">80.3% Comm Reduction:</strong> LA+Coarse drops comm cost from 6.67M to 1.31M cycles on Map.</li>
-          <li>• <strong style="color: #047857;">39.3% Execution Speedup:</strong> Simulated runtime drops from 281K to 170K cycles.</li>
-          <li>• <strong style="color: #047857;">Zero Steals:</strong> Drops from 63 remote mesh steals in WS down to ZERO in LA+Coarse!</li>
-        </ul>
+    <!-- Right Column: TILEPro64 Mesh Simulator Chart -->
+    <div class="card" style="padding: 20px; display: flex; flex-direction: column;">
+      <div style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">2. TILEPro64 8×8 Mesh Simulation (64 Cores)</div>
+      <img src="../tilepro64/results/tilepro64_results.png" style="width: 100%; border-radius: 8px; border: 1.5px solid #111827; margin-bottom: 10px;" alt="TILEPro64 Simulation Chart">
+      <div style="font-size: 14px; line-height: 1.45; font-family: 'JetBrains Mono', monospace;">
+        • <strong style="color: #047857;">Map:</strong> −80.3% Comm Drop · 39.3% Speedup · 0 Steals vs 63 in WS baseline
       </div>
     </div>
+  </div>
+
+  <div class="callout-banner" style="margin-top: 0; margin-bottom: 14px; padding: 12px 24px; font-size: 16px;">
+    <strong>THE EMPIRICAL LAW:</strong> Locality dealing cuts communication by up to 80.3%, but causes a +15.1% execution slowdown on irregular DAGs (SparseLU) without load balancing.
   </div>
 
   <div class="footer">

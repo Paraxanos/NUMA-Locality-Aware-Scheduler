@@ -200,31 +200,28 @@ function footer(slide: PptxGenJS.Slide, text: string, n: number) {
   s.addText('When Locality Slows Down', { x: 6.6, y: 1.6, w: 6.2, h: 0.6, fontSize: 30, bold: true, color: INK, fontFace: FONTS.display, charSpacing: -2, valign: 'middle' });
   s.addText('100 NUMA runs (8-node Opteron) + 56 TILEPro64 mesh configurations', { x: 0.45, y: 2.35, w: 12, h: 0.3, fontSize: 14, color: '#4B5563', fontFace: FONTS.body, italic: true });
 
-  // Left: embedded chart image
-  s.addShape(pres.ShapeType.roundRect, { x: 0.45, y: 2.85, w: 7.2, h: 3.7, rectRadius: 0.08, fill: { color: PAPER }, line: { color: INK, width: 2.5 }, shadow: { type: 'outer', color: 'C8C6BF', pt: 3, blur: 4 } });
-  s.addText('AMD Opteron Reproduction (100 Runs · 100% Verification)', { x: 0.75, y: 3.0, w: 6.6, h: 0.3, fontSize: 15, bold: true, color: INK, fontFace: FONTS.display });
-  s.addImage({ path: './results/numa/fig7_reproduction.png', x: 0.75, y: 3.35, w: 6.6, h: 2.4 });
-  // Caption bullets
-  s.addShape(pres.ShapeType.roundRect, { x: 0.75, y: 5.8, w: 6.6, h: 0.6, rectRadius: 0.06, fill: { color: '#EFEAE3' }, line: { color: INK, width: 1 } });
-  s.addText('•  Map: −45.1% Comm (0.55×) · −19.0% Cycles (0.81×)    •  Matmul: −22.5% Comm (0.78×) · Parity    •  SparseLU: −26.7% Comm BUT +15.1% SLOWER!', { x: 0.9, y: 5.85, w: 6.3, h: 0.5, fontSize: 10, color: INK, fontFace: FONTS.mono, valign: 'middle' });
+  // Two side-by-side cards: Left = NUMA Fig 7, Right = TILEPro64 Mesh Chart
+  const cardW = 5.95, cardH = 3.85;
 
-  // Right: dark pathology card + tilepro64 card
-  s.addShape(pres.ShapeType.roundRect, { x: 7.9, y: 2.85, w: 5.0, h: 2.0, rectRadius: 0.08, fill: { color: DARKNAVY }, line: { color: INK, width: 2.5 } });
-  s.addText('THE PARADOX EXPLAINED', { x: 8.15, y: 3.0, w: 4.5, h: 0.3, fontSize: 14, bold: true, color: CANARY, charSpacing: 2, fontFace: FONTS.mono });
-  const pathLines = [
-    '1. Irregular DAG: tasks have skewed input dependencies.',
-    '2. Load-blind dealer sends critical tasks to Node 0.',
-    '3. Queue 0: 20 tasks  ·  Queues 1–7: EMPTY.',
-    '4. 23 cores idle — comm win wiped by starvation.',
-  ];
-  pathLines.forEach((ln, i) => {
-    s.addText(ln, { x: 8.15, y: 3.35 + i * 0.32, w: 4.5, h: 0.3, fontSize: 11, color: PAPER, fontFace: FONTS.mono, valign: 'middle' });
-  });
+  // Left Card: AMD Opteron NUMA
+  s.addShape(pres.ShapeType.roundRect, { x: 0.45, y: 2.7, w: cardW, h: cardH, rectRadius: 0.08, fill: { color: PAPER }, line: { color: INK, width: 2.5 }, shadow: { type: 'outer', color: 'C8C6BF', pt: 3, blur: 4 } });
+  s.addText('1. AMD Opteron NUMA Reproduction (100 Runs)', { x: 0.65, y: 2.85, w: cardW - 0.4, h: 0.35, fontSize: 16, bold: true, color: INK, fontFace: FONTS.display });
+  s.addImage({ path: './results/numa/fig7_reproduction.png', x: 0.65, y: 3.25, w: cardW - 0.4, h: 2.45 });
+  // Left Badge
+  s.addShape(pres.ShapeType.roundRect, { x: 0.65, y: 5.85, w: cardW - 0.4, h: 0.55, rectRadius: 0.06, fill: { color: '#EFEAE3' }, line: { color: INK, width: 1.2 } });
+  s.addText('• Map: −45.1% Comm · −19.0% Cycles    • SparseLU: +15.1% SLOWER (Paradox!)', { x: 0.75, y: 5.88, w: cardW - 0.6, h: 0.48, fontSize: 10, bold: true, color: INK, fontFace: FONTS.mono, valign: 'middle' });
 
-  s.addShape(pres.ShapeType.roundRect, { x: 7.9, y: 5.0, w: 5.0, h: 1.55, rectRadius: 0.08, fill: { color: '#EFEAE3' }, line: { color: INK, width: 2.5 } });
-  s.addText('TILEPro64 8×8 Mesh', { x: 8.15, y: 5.1, w: 4.5, h: 0.3, fontSize: 16, bold: true, color: INK, fontFace: FONTS.display });
-  s.addText('• 80.3% comm reduction (6.67M → 1.31M cycles)  ·  • 39.3% speedup (281K → 170K cycles)  ·  • Zero remote steals (63 → 0)', { x: 8.15, y: 5.45, w: 4.5, h: 0.8, fontSize: 11, color: INK, fontFace: FONTS.body, lineSpacing: 13 });
-  s.addText('+15.1% execution slowdown vs −26.7% comm cost drop — the paradox', { x: 8.15, y: 6.25, w: 4.5, h: 0.25, fontSize: 9, bold: true, color: '#B91C1C', fontFace: FONTS.mono });
+  // Right Card: TILEPro64 8×8 Mesh
+  s.addShape(pres.ShapeType.roundRect, { x: 6.85, y: 2.7, w: cardW, h: cardH, rectRadius: 0.08, fill: { color: PAPER }, line: { color: INK, width: 2.5 }, shadow: { type: 'outer', color: 'C8C6BF', pt: 3, blur: 4 } });
+  s.addText('2. TILEPro64 8×8 Mesh Simulation (64 Cores)', { x: 7.05, y: 2.85, w: cardW - 0.4, h: 0.35, fontSize: 16, bold: true, color: INK, fontFace: FONTS.display });
+  s.addImage({ path: './tilepro64/results/tilepro64_results.png', x: 7.05, y: 3.25, w: cardW - 0.4, h: 2.45 });
+  // Right Badge
+  s.addShape(pres.ShapeType.roundRect, { x: 7.05, y: 5.85, w: cardW - 0.4, h: 0.55, rectRadius: 0.06, fill: { color: '#EFEAE3' }, line: { color: INK, width: 1.2 } });
+  s.addText('• Map: −80.3% Comm Drop · 39.3% Speedup · 0 Steals vs 63 in WS baseline', { x: 7.15, y: 5.88, w: cardW - 0.6, h: 0.48, fontSize: 10, bold: true, color: INK, fontFace: FONTS.mono, valign: 'middle' });
+
+  // Bottom Banner: The Paradox & Takeaway
+  s.addShape(pres.ShapeType.roundRect, { x: 0.45, y: 6.65, w: 12.35, h: 0.45, rectRadius: 0.06, fill: { color: CANARY }, line: { color: INK, width: 2 } });
+  s.addText('THE EMPIRICAL LAW: Locality dealing cuts comm cost by up to 80.3%, but causes a +15.1% slowdown on irregular DAGs without load balancing.', { x: 0.65, y: 6.65, w: 11.95, h: 0.45, fontSize: 11.5, bold: true, color: INK, align: 'center', valign: 'middle', fontFace: FONTS.body });
 
   footer(s, 'Empirical Reproduction: AMD Opteron NUMA & TILEPro64 Manycore Mesh', 4);
 }
