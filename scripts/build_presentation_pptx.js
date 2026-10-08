@@ -18,10 +18,10 @@ const path = require('path');
 const fs = require('fs');
 
 const pptx = new pptxgen();
-pptx.layout = 'LAYOUT_16x9';
+pptx.defineLayout({ name: 'CUSTOM_16_9', width: 13.333, height: 7.5 });
+pptx.layout = 'CUSTOM_16_9';
 pptx.title = 'Locality-Aware Task Scheduling on Heterogeneous HPC Architectures';
 pptx.subject = 'HPC Final Project Presentation';
-pptx.author = 'Qasim, Awadesh, Devashish, Husaam, Chirag';
 pptx.company = 'HPC & Runtime Systems Architecture';
 
 // Color Palette Constants
@@ -206,8 +206,8 @@ function addCalloutBanner(slide, { x, y, w, h, titleText, bodyText }) {
     }
   );
 
-  // Presenter Footer
-  addFooter(slide, 'Qasim · Awadesh · Devashish · Husaam · Chirag', '01');
+  // Slide Footer
+  addFooter(slide, 'Locality-Aware Task Scheduling on Heterogeneous HPC Architectures', '01');
 
   // RIGHT SIDE: Hero Architectural Comparison Card
   addNeoCard(slide, { x: 6.8, y: 1.1, w: 5.7, h: 5.4, fill: C.cardWhite, radius: 0.18 });
@@ -776,7 +776,7 @@ function addCalloutBanner(slide, { x, y, w, h, titleText, bodyText }) {
     x: 7.0, y: 2.85, w: 5.3, h: 3.8, fontFace: 'Arial'
   });
 
-  addFooter(slide, 'Final HPC Project Defense · Qasim · Awadesh · Devashish · Husaam · Chirag', '06');
+  addFooter(slide, 'Locality-Aware Task Scheduling · Final Project Defense', '06');
 }
 
 // Generate the PPTX file

@@ -8,73 +8,78 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: #555;
+    background: #475569;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     color: #111827;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
+  /* 16:9 Widescreen Canvas at 1600x900 for optimal presentation scaling */
   .slide {
-    width: 1920px;
-    height: 1080px;
+    width: 1600px;
+    height: 900px;
     background-color: #F4F0EA;
     background-image: 
-      linear-gradient(to right, #E4DFD6 1px, transparent 1px),
-      linear-gradient(to bottom, #E4DFD6 1px, transparent 1px);
-    background-size: 48px 48px;
+      linear-gradient(to right, #E4DFD6 1.5px, transparent 1.5px),
+      linear-gradient(to bottom, #E4DFD6 1.5px, transparent 1.5px);
+    background-size: 40px 40px;
     position: relative;
-    padding: 60px 100px 50px 100px;
-    margin: 20px auto;
+    padding: 50px 75px 40px 75px;
+    margin: 30px auto;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
   }
 
   @media print {
     @page {
-      size: 1920px 1080px;
+      size: 1600px 900px;
       margin: 0;
     }
     body { background: transparent; margin: 0; }
     .slide {
       margin: 0;
+      box-shadow: none;
       page-break-after: always;
       page-break-inside: avoid;
     }
   }
 
   /* Neo-brutalist Badges */
-  .badge-row { display: flex; gap: 14px; align-items: center; margin-bottom: 24px; }
+  .badge-row { display: flex; gap: 14px; align-items: center; margin-bottom: 20px; }
   .badge-dark {
     background: #111827;
     color: #FFFFFF;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
-    padding: 7px 18px;
+    padding: 6px 18px;
     border-radius: 999px;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
   }
   .badge-outline {
     background: #FFFFFF;
     color: #111827;
     border: 2px solid #111827;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
-    font-weight: 700;
-    padding: 5px 18px;
-    border-radius: 999px;
-    letter-spacing: 0.05em;
-  }
-  .pill {
-    padding: 6px 16px;
-    border-radius: 999px;
-    border: 2px solid #111827;
     font-size: 14px;
     font-weight: 700;
+    padding: 4px 18px;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+  }
+  .pill {
+    padding: 7px 18px;
+    border-radius: 999px;
+    border: 2px solid #111827;
+    font-size: 15px;
+    font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
   .pill-white { background: #FFFFFF; color: #111827; }
   .pill-blue { background: #DCE4FF; color: #111827; }
@@ -83,10 +88,10 @@
   .pill-yellow { background: #FFD147; color: #111827; }
 
   /* Titles */
-  .slide-title-wrap { margin-bottom: 16px; }
+  .slide-title-wrap { margin-bottom: 20px; }
   .slide-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 48px;
+    font-size: 46px;
     font-weight: 700;
     color: #111827;
     line-height: 1.15;
@@ -99,24 +104,25 @@
     background: #FFD147;
     border: 2.5px solid #111827;
     border-radius: 12px;
-    padding: 4px 18px;
+    padding: 3px 18px;
     display: inline-block;
     box-shadow: 4px 4px 0px #111827;
+    color: #111827;
   }
   .slide-subtitle {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 17px;
+    font-size: 16px;
     color: #4B5563;
-    margin-top: 6px;
+    margin-top: 8px;
   }
 
   /* Neo-brutalist Cards */
   .card {
     background: #FFFFFF;
     border: 2.5px solid #111827;
-    border-radius: 16px;
+    border-radius: 18px;
     box-shadow: 6px 6px 0px #111827;
-    padding: 28px;
+    padding: 26px 30px;
     position: relative;
   }
   .card-blue { background: #EEF2FF; }
@@ -126,7 +132,7 @@
 
   .card-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 700;
     color: #111827;
     margin-bottom: 12px;
@@ -139,14 +145,14 @@
     border: 2.5px solid #111827;
     border-radius: 14px;
     box-shadow: 5px 5px 0px #111827;
-    padding: 16px 28px;
-    font-size: 18px;
+    padding: 14px 26px;
+    font-size: 17px;
     line-height: 1.4;
     color: #111827;
     margin-top: auto;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
-  .callout-banner strong { font-family: 'Space Grotesk', sans-serif; font-size: 19px; }
+  .callout-banner strong { font-family: 'Space Grotesk', sans-serif; font-size: 18px; }
 
   /* Footer */
   .footer {
@@ -154,9 +160,9 @@
     justify-content: space-between;
     align-items: center;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 16px;
+    font-size: 15px;
     color: #4B5563;
-    padding-top: 16px;
+    padding-top: 14px;
     border-top: 1.5px solid #E2DDD4;
     margin-top: auto;
   }
@@ -168,7 +174,7 @@
     border-radius: 12px;
     padding: 16px 20px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 14px;
+    font-size: 14.5px;
     line-height: 1.5;
     color: #F8FAFC;
     box-shadow: 4px 4px 0px #111827;
@@ -179,12 +185,27 @@
   .code-box .cyan { color: #38BDF8; font-weight: bold; }
 
   /* Grid Layouts */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; flex: 1; margin-bottom: 20px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; flex: 1; margin-bottom: 20px; }
-  .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 24px; flex: 1; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; flex: 1; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; flex: 1; margin-bottom: 16px; }
+  .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 22px; flex: 1; margin-bottom: 16px; }
 
-  ul.spec-list { list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 16px; line-height: 1.45; color: #374151; }
+  ul.spec-list { list-style: none; display: flex; flex-direction: column; gap: 11px; font-size: 16.5px; line-height: 1.45; color: #374151; }
   ul.spec-list li strong { color: #111827; }
+
+  /* Diagram Elements for Slide 1 */
+  .diag-node {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 3px solid #111827;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    box-shadow: 3px 3px 0px #111827;
+  }
 </style>
 </head>
 <body>
@@ -196,12 +217,12 @@
     <span class="badge-outline">RESEARCH REPRODUCTION & EXTENSION</span>
   </div>
 
-  <div style="display: flex; gap: 60px; flex: 1; align-items: center;">
+  <div style="display: flex; gap: 70px; flex: 1; align-items: center;">
     <!-- Left Hero Info -->
-    <div style="flex: 1.1;">
-      <h1 style="font-family: 'Space Grotesk', sans-serif; font-size: 68px; font-weight: 700; line-height: 1.1; margin-bottom: 16px;">
+    <div style="flex: 1.15;">
+      <h1 style="font-family: 'Space Grotesk', sans-serif; font-size: 64px; font-weight: 700; line-height: 1.12; margin-bottom: 20px;">
         Locality-Aware<br>Task Scheduling<br>
-        <span class="highlight-box" style="font-size: 52px; margin-top: 8px;">on Heterogeneous HPC</span>
+        <span class="highlight-box" style="font-size: 50px; margin-top: 10px;">on Heterogeneous HPC</span>
       </h1>
 
       <div style="display: flex; gap: 12px; margin: 28px 0 24px 0;">
@@ -210,46 +231,49 @@
         <span class="pill pill-peach">NOVA Co-Scheduler</span>
       </div>
 
-      <p style="font-size: 20px; line-height: 1.5; color: #374151; max-width: 750px;">
-        An empirical reproduction of Muddukrishna et al. (Scientific Programming 2015), uncovering the <strong>SparseLU locality paradox (+15.1% slowdown)</strong>, and delivering the <strong>NOVA co-scheduling runtime architecture</strong> for multi-socket servers and 2D mesh manycores.
+      <p style="font-size: 19px; line-height: 1.55; color: #374151; max-width: 760px;">
+        An empirical reproduction of Muddukrishna et al. (Scientific Programming 2015), uncovering the <strong>SparseLU locality paradox (+15.1% slowdown)</strong>, and delivering the <strong>NOVA co-scheduling architecture</strong> for multi-socket servers and 2D mesh manycores.
       </p>
     </div>
 
-    <!-- Right Hero Card -->
-    <div class="card" style="flex: 0.9; padding: 32px;">
-      <div style="font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 4px;">Dual-Architecture Latency Cliffs</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #4B5563; margin-bottom: 24px;">Why blind work-stealing collapses on non-uniform memory topologies</div>
+    <!-- Right Hero Visual Diagram (Clean Swiss Style matching reference.pdf) -->
+    <div class="card" style="flex: 0.85; padding: 28px; display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; margin-bottom: 4px;">Dual-Architecture Latency Cliffs</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: #4B5563; margin-bottom: 20px;">Memory access costs across interconnect topologies</div>
+      </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px;">
-        <!-- NUMA Mini Card -->
-        <div class="card card-blue" style="padding: 20px; box-shadow: 4px 4px 0px #111827;">
-          <div style="font-weight: 700; font-size: 17px; margin-bottom: 4px;">AMD Opteron (NUMA)</div>
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #4B5563; margin-bottom: 14px;">8 Sockets · 48 Cores</div>
-          <div style="font-size: 15px; margin-bottom: 8px;">Local DRAM:<br><strong style="font-size: 22px; color: #047857;">~40 cycles</strong></div>
-          <div style="font-size: 15px;">Remote Bus:<br><strong style="font-size: 22px; color: #B91C1C;">240–340 cycles</strong><br><span style="font-size: 13px; color: #4B5563;">(6×–8× Latency Cliff)</span></div>
+      <!-- Architectural comparison blocks -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <!-- NUMA Block -->
+        <div class="card card-blue" style="padding: 18px; box-shadow: 4px 4px 0px #111827;">
+          <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">AMD Opteron (NUMA)</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #4B5563; margin-bottom: 12px;">8 Sockets · 48 Cores</div>
+          <div style="font-size: 14px; margin-bottom: 8px;">Local DRAM:<br><strong style="font-size: 20px; color: #047857;">~40 cycles</strong></div>
+          <div style="font-size: 14px;">Remote Bus:<br><strong style="font-size: 20px; color: #B91C1C;">240–340 cycles</strong><br><span style="font-size: 12px; color: #4B5563;">(6×–8× Latency Cliff)</span></div>
         </div>
 
-        <!-- TILEPro64 Mini Card -->
-        <div class="card card-peach" style="padding: 20px; box-shadow: 4px 4px 0px #111827;">
-          <div style="font-weight: 700; font-size: 17px; margin-bottom: 4px;">TILEPro64 (Mesh)</div>
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #4B5563; margin-bottom: 14px;">8×8 Grid · 64 Cores</div>
-          <div style="font-size: 15px; margin-bottom: 8px;">Local Tile L2 Bank:<br><strong style="font-size: 22px; color: #047857;">10 cycles</strong></div>
-          <div style="font-size: 15px;">Remote Mesh Hop:<br><strong style="font-size: 22px; color: #B91C1C;">38 + 2·h cycles</strong><br><span style="font-size: 13px; color: #4B5563;">(Up to 14 hops = 66 cyc)</span></div>
+        <!-- TILEPro64 Block -->
+        <div class="card card-peach" style="padding: 18px; box-shadow: 4px 4px 0px #111827;">
+          <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">TILEPro64 (Mesh)</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #4B5563; margin-bottom: 12px;">8×8 Grid · 64 Cores</div>
+          <div style="font-size: 14px; margin-bottom: 8px;">Local L2 Bank:<br><strong style="font-size: 20px; color: #047857;">10 cycles</strong></div>
+          <div style="font-size: 14px;">Remote Mesh Hop:<br><strong style="font-size: 20px; color: #B91C1C;">38 + 2·h cycles</strong><br><span style="font-size: 12px; color: #4B5563;">(Up to 14 hops = 66 cyc)</span></div>
         </div>
       </div>
 
+      <!-- Formula Snippet -->
       <div class="code-box">
-        <span class="comment">// The Fundamental HPC Scheduler Dilemma:</span><br>
+        <span class="comment">// The Locality vs Load Trade-off:</span><br>
         <span class="highlight">cost(X) = Σ (D[i] / line_size) × latency(X, i)</span><br>
         • Locality dealing cuts comm stalls by up to 80%...<br>
-        • <span class="warn">BUT starves idle cores when queue backlog is ignored!</span><br>
-        <span class="cyan">Goal: Co-schedule memory locality AND core load balance.</span>
+        • <span class="warn">BUT starves cores when queue length is ignored!</span>
       </div>
     </div>
   </div>
 
   <div class="footer">
-    <span>Qasim · Awadesh · Devashish · Husaam · Chirag</span>
+    <span>Locality-Aware Task Scheduling on Heterogeneous HPC Architectures</span>
     <span>01 / 06</span>
   </div>
 </div>
@@ -271,9 +295,9 @@
   <div class="grid-2">
     <!-- AMD Opteron -->
     <div class="card card-blue">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <div class="card-title">AMD Opteron 8-Node NUMA</div>
-        <span class="pill pill-white" style="font-size: 12px;">HyperTransport Interconnect</span>
+        <span class="pill pill-white" style="font-size: 13px;">HyperTransport Interconnect</span>
       </div>
       <ul class="spec-list">
         <li><strong>Topology:</strong> 8 discrete sockets (3–6 cores per node, 24–48 cores total)</li>
@@ -288,9 +312,9 @@
 
     <!-- TILEPro64 -->
     <div class="card card-peach">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <div class="card-title">TILEPro64 64-Tile Manycore Mesh</div>
-        <span class="pill pill-white" style="font-size: 12px;">8×8 2D Dynamic Mesh</span>
+        <span class="pill pill-white" style="font-size: 13px;">8×8 2D Dynamic Mesh</span>
       </div>
       <ul class="spec-list">
         <li><strong>Topology:</strong> 8×8 2D grid network (1 VLIW core per tile, 64 cores total)</li>
@@ -332,10 +356,10 @@
     <!-- Card 1: H1-H4 -->
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <div class="card-title" style="font-size: 21px;">Stealing & Placement</div>
-        <span class="pill pill-blue" style="font-size: 11px;">H1 – H4</span>
+        <div class="card-title" style="font-size: 22px;">Stealing & Placement</div>
+        <span class="pill pill-blue" style="font-size: 12px;">H1 – H4</span>
       </div>
-      <ul class="spec-list" style="font-size: 14.5px; gap: 12px;">
+      <ul class="spec-list" style="font-size: 15px; gap: 13px;">
         <li><strong>H1 (Static Steal Reach):</strong> Hard-coded vicinity size starves threads on Map or drags 6× remote stalls on Vecmul.</li>
         <li><strong>H2 (Queue-Level Stealing):</strong> Pops victim queue tail blindly; ignores whether another task in that queue has local data!</li>
         <li><strong>H3 (Load-Blind Placement):</strong> Dealer routes to argmin(comm_cost) without reading queue length; piles all work on 1 core.</li>
@@ -346,10 +370,10 @@
     <!-- Card 2: H5-H7 -->
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <div class="card-title" style="font-size: 21px;">Data Model & Feedback</div>
-        <span class="pill pill-peach" style="font-size: 11px;">H5 – H7</span>
+        <div class="card-title" style="font-size: 22px;">Data Model & Feedback</div>
+        <span class="pill pill-peach" style="font-size: 12px;">H5 – H7</span>
       </div>
-      <ul class="spec-list" style="font-size: 14.5px; gap: 14px;">
+      <ul class="spec-list" style="font-size: 15px; gap: 15px;">
         <li><strong>H5 (Fragile Footprints):</strong> Footprint vector D relies on OpenMP depend clauses. Incomplete clauses silently ruin placement.</li>
         <li><strong>H6 (No Feedback Loop):</strong> Data distribution is frozen at omp_malloc. Runtime never migrates hot mis-placed pages.</li>
         <li><strong>H7 (Coarse/Fine Menu Blind Spot):</strong> Rigid 2-item menu fails on irregular matrix blocks (SparseLU), causing severe regression.</li>
@@ -359,10 +383,10 @@
     <!-- Card 3: H8-H10 -->
     <div class="card card-blue">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <div class="card-title" style="font-size: 21px;">Mesh Bottlenecks</div>
-        <span class="pill pill-white" style="font-size: 11px;">H8 – H10</span>
+        <div class="card-title" style="font-size: 22px;">Mesh Bottlenecks</div>
+        <span class="pill pill-white" style="font-size: 12px;">H8 – H10</span>
       </div>
-      <ul class="spec-list" style="font-size: 14.5px; gap: 14px;">
+      <ul class="spec-list" style="font-size: 15px; gap: 15px;">
         <li><strong>H8 (Static Home-Cache Trapping):</strong> Data is permanently locked to initial home cache; forces brutal locality vs load trade-off.</li>
         <li><strong>H9 (Center Bisection Contention):</strong> XY dimension-order routing concentrates traffic on center bisection links (tiles 3,3 to 4,4).</li>
         <li><strong>H10 (2D Coarse/Fine Mismatch):</strong> 1D line striping destroys 2D spatial locality for matrix stencils and blocked solvers.</li>
@@ -396,10 +420,10 @@
 
   <div style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 32px; flex: 1; margin-bottom: 16px;">
     <!-- Left Column: Figure 7 Reproduction Chart -->
-    <div class="card" style="padding: 20px; display: flex; flex-direction: column;">
-      <div style="font-weight: 700; font-size: 18px; margin-bottom: 10px;">AMD Opteron Reproduction (100 Runs, 100% Verification)</div>
-      <img src="../results/numa/fig7_reproduction.png" style="width: 100%; border-radius: 8px; border: 1.5px solid #111827; margin-bottom: 12px;" alt="NUMA Reproduction Chart">
-      <div style="font-size: 15px; line-height: 1.5;">
+    <div class="card" style="padding: 22px; display: flex; flex-direction: column;">
+      <div style="font-weight: 700; font-size: 19px; margin-bottom: 10px;">AMD Opteron Reproduction (100 Runs, 100% Verification)</div>
+      <img src="../results/numa/fig7_reproduction.png" style="width: 100%; border-radius: 10px; border: 1.5px solid #111827; margin-bottom: 14px;" alt="NUMA Reproduction Chart">
+      <div style="font-size: 15.5px; line-height: 1.55;">
         • <strong style="color: #047857;">Map:</strong> -45.1% Comm Cost (0.55×) · -19.0% Execution Cycles (0.81×)<br>
         • <strong>Matmul:</strong> -22.5% Comm Cost (0.78×) · Runtime Parity (Balanced)<br>
         • <strong style="color: #DC2626;">SparseLU:</strong> -26.7% Comm Cost BUT +15.1% SLOWER Execution! (The Paradox)
@@ -410,8 +434,8 @@
     <div style="display: flex; flex-direction: column; gap: 20px;">
       <!-- SparseLU Pathology Box -->
       <div class="card card-dark" style="padding: 24px;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: #FFD147; margin-bottom: 12px;">The SparseLU Pathology Explained</div>
-        <div class="code-box" style="box-shadow: none; border-color: #334155; font-size: 13.5px;">
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 21px; font-weight: 700; color: #FFD147; margin-bottom: 12px;">The SparseLU Pathology Explained</div>
+        <div class="code-box" style="box-shadow: none; border-color: #334155; font-size: 14px;">
           <span class="comment">// Why locality dealing caused a +15.1% slowdown:</span><br>
           1. <strong>Irregular Task DAG:</strong> Tasks have skewed input dependencies.<br>
           2. <strong>Load-Blind Placement:</strong> Dealer sent all critical tasks to Node 0.<br>
@@ -422,8 +446,8 @@
 
       <!-- TILEPro64 Simulator Box -->
       <div class="card card-peach" style="padding: 24px; flex: 1;">
-        <div class="card-title" style="font-size: 20px; margin-bottom: 12px;">TILEPro64 8×8 Mesh Simulation Findings</div>
-        <ul class="spec-list" style="font-size: 14.5px; gap: 8px;">
+        <div class="card-title" style="font-size: 21px; margin-bottom: 12px;">TILEPro64 8×8 Mesh Simulation Findings</div>
+        <ul class="spec-list" style="font-size: 15px; gap: 10px;">
           <li>• <strong style="color: #047857;">80.3% Comm Reduction:</strong> LA+Coarse drops comm cost from 6.67M to 1.31M cycles on Map.</li>
           <li>• <strong style="color: #047857;">39.3% Execution Speedup:</strong> Simulated runtime drops from 281K to 170K cycles.</li>
           <li>• <strong style="color: #047857;">Zero Steals:</strong> Drops from 63 remote mesh steals in WS down to ZERO in LA+Coarse!</li>
@@ -455,63 +479,63 @@
   <div class="grid-2x2">
     <!-- Pillar 1 -->
     <div class="card card-blue">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <div class="card-title" style="font-size: 20px;">Pillar 1: Load-Aware Work Dealing (N-A)</div>
-        <span class="pill pill-white" style="font-size: 11px;">Fixes H3, H4</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="card-title" style="font-size: 21px;">Pillar 1: Load-Aware Work Dealing (N-A)</div>
+        <span class="pill pill-white" style="font-size: 12px;">Fixes H3, H4</span>
       </div>
-      <div class="code-box" style="padding: 10px 14px; font-size: 13.5px; margin-bottom: 10px;">
+      <div class="code-box" style="padding: 10px 14px; font-size: 14px; margin-bottom: 10px;">
         <span class="highlight">score(q) = α · comm_norm(D, q) + (1 - α) · occ_norm(q)</span>
       </div>
-      <p style="font-size: 15px; line-height: 1.45; color: #374151;">
+      <p style="font-size: 15.5px; line-height: 1.45; color: #374151;">
         Blends data proximity with real-time queue backlog. Automatically diverts tasks to neighboring idle queues before congestion creates worker starvation.
       </p>
     </div>
 
     <!-- Pillar 2 -->
     <div class="card card-peach">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <div class="card-title" style="font-size: 20px;">Pillar 2: Task-Level Shadow Index (N-B)</div>
-        <span class="pill pill-white" style="font-size: 11px;">Fixes H2</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="card-title" style="font-size: 21px;">Pillar 2: Task-Level Shadow Index (N-B)</div>
+        <span class="pill pill-white" style="font-size: 12px;">Fixes H2</span>
       </div>
-      <div class="code-box" style="padding: 10px 14px; font-size: 12.5px; margin-bottom: 10px;">
+      <div class="code-box" style="padding: 10px 14px; font-size: 13px; margin-bottom: 10px;">
         <span class="highlight">steal_target = argmax_{t ∈ Top-K} ( Affinity(thief, Footprint(t)) )</span>
       </div>
-      <p style="font-size: 15px; line-height: 1.45; color: #374151;">
+      <p style="font-size: 15.5px; line-height: 1.45; color: #374151;">
         Replaces blind queue-tail popping with a lock-free Shadow Index. Idle thief inspects top k=8 tasks in victim queue and steals the task matching thief local RAM.
       </p>
     </div>
 
     <!-- Pillar 3 -->
     <div class="card card-green">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <div class="card-title" style="font-size: 20px;">Pillar 3: Adaptive Vicinity Radius (N-C)</div>
-        <span class="pill pill-white" style="font-size: 11px;">Fixes H1</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="card-title" style="font-size: 21px;">Pillar 3: Adaptive Vicinity Radius (N-C)</div>
+        <span class="pill pill-white" style="font-size: 12px;">Fixes H1</span>
       </div>
-      <div class="code-box" style="padding: 10px 14px; font-size: 12.5px; margin-bottom: 10px;">
+      <div class="code-box" style="padding: 10px 14px; font-size: 13px; margin-bottom: 10px;">
         <span class="highlight">radius_{t+1} = clamp( radius_t + sign(rate_{EWMA} - target), 1, D_max )</span>
       </div>
-      <p style="font-size: 15px; line-height: 1.45; color: #374151;">
+      <p style="font-size: 15.5px; line-height: 1.45; color: #374151;">
         Replaces fixed hard-coded steal radius with per-worker EWMA feedback. Expands reach during starvation; contracts to local cluster when queues are well-balanced.
       </p>
     </div>
 
     <!-- Pillar 4 -->
     <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <div class="card-title" style="font-size: 20px;">Pillar 4: Dynamic Migration & Zero Locks</div>
-        <span class="pill pill-peach" style="font-size: 11px;">Fixes H6, H8</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="card-title" style="font-size: 21px;">Pillar 4: Dynamic Migration & Zero Locks</div>
+        <span class="pill pill-peach" style="font-size: 12px;">Fixes H6, H8</span>
       </div>
-      <div class="code-box" style="padding: 10px 14px; font-size: 13.5px; margin-bottom: 10px;">
+      <div class="code-box" style="padding: 10px 14px; font-size: 14px; margin-bottom: 10px;">
         <span class="highlight">Trigger Migration IF (Acc_Benefit &gt; C_mig ≈ 120 cycles)</span>
       </div>
-      <p style="font-size: 15px; line-height: 1.45; color: #374151;">
+      <p style="font-size: 15.5px; line-height: 1.45; color: #374151;">
         Dynamic home-cache line re-homing toward executing tiles. Coordination telemetry uses double-buffered statistics swapped via atomic CAS every 64 ops — zero locks!
       </p>
     </div>
   </div>
 
   <div class="callout-banner" style="margin-top: 0; margin-bottom: 14px;">
-    <strong>NOVA Principle:</strong> Maximize memory locality when queues are balanced; dynamically transition to load-balancing when queue backlog or interconnect contention threatens idle core stalls.
+    <strong>NOVA Principle:</strong> Maximize memory locality when queues are balanced; dynamically transition to load-balancing when queue backlog threatens idle core stalls.
   </div>
 
   <div class="footer">
@@ -539,9 +563,9 @@
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <div class="card-title">Summary of Concrete Deliverables</div>
-        <span class="pill pill-green" style="font-size: 11px;">100% COMPLETE & VERIFIED</span>
+        <span class="pill pill-green" style="font-size: 12px;">100% COMPLETE & VERIFIED</span>
       </div>
-      <ul class="spec-list" style="font-size: 14px; gap: 8px;">
+      <ul class="spec-list" style="font-size: 15px; gap: 9px;">
         <li><strong>1. AMD Opteron NUMA Baseline Reproduction:</strong> 100 benchmark runs across 5 kernels; replicated Figure 7 with 100% test pass (check_ok=1).</li>
         <li><strong>2. Standalone TILEPro64 8×8 Mesh Simulator:</strong> Built full C++/Python mesh simulator from scratch; modeled 10 vs 38+2·hop cycles; 11/11 tests passing.</li>
         <li><strong>3. Discovery of the SparseLU Paradox:</strong> Empirically proved the queue starvation pathology that causes locality dealing to run +15.1% slower than work-stealing.</li>
@@ -555,9 +579,9 @@
     <div class="card card-dark">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <div class="card-title">Anticipated Examiner Questions & Answers</div>
-        <span class="pill pill-yellow" style="font-size: 11px;">DEFENSE READY</span>
+        <span class="pill pill-yellow" style="font-size: 12px;">DEFENSE READY</span>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13.5px; line-height: 1.45;">
+      <div style="display: flex; flex-direction: column; gap: 13px; font-size: 14.5px; line-height: 1.45;">
         <div>
           <strong style="color: #FFD147;">Q1: Why simulate TILEPro64 instead of running real hardware?</strong><br>
           <span style="color: #CBD5E1;">Ans: TILEPro64 is discontinued specialty hardware. A software model implementing the exact 8×8 mesh and 2D Manhattan latency matrix enables deterministic, cycle-accurate evaluation without hardware drift.</span>
@@ -579,7 +603,7 @@
   </div>
 
   <div class="footer">
-    <span>Final HPC Project Defense · Qasim · Awadesh · Devashish · Husaam · Chirag</span>
+    <span>Locality-Aware Task Scheduling · Final Project Defense</span>
     <span>06 / 06</span>
   </div>
 </div>
