@@ -64,9 +64,7 @@ We reproduced the paper's Figure 7 across 5 computational kernels (Map, Matmul, 
 
 ### The NOVA / ALLoC Solution (`patches/nova/`)
 To resolve the SparseLU paradox, we developed the **NOVA** co-scheduler:
-- **N-A (Load-Aware Dealing):** Continuous composite score $$
-\text{score}(q) = \alpha \cdot \text{comm\_norm} + (1 - \alpha) \cdot \text{occ\_norm}
-$$ balancing data proximity with queue backlog.
+- **N-A (Load-Aware Dealing):** Continuous composite score $\mathrm{score}(q) = \alpha \cdot \mathrm{comm}_{\mathrm{norm}} + (1 - \alpha) \cdot \mathrm{occ}_{\mathrm{norm}}$ balancing data proximity with queue backlog.
 - **N-B (Task-Level Locality Stealing):** Lock-free Shadow Index ring buffer ($k=8$) allowing thieves to peek at waiting tasks and steal those matching their local memory.
 - **N-C (Adaptive Steal Radius):** Per-worker EWMA dynamically adjusts search reach to prevent starvation without flooding buses.
 - **Zero Lock Contention:** Double-buffered control plane coordinator swaps statistics snapshots every 64 ops.
