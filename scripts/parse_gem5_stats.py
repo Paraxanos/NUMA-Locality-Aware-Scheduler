@@ -12,11 +12,12 @@ def parse_roi_stats(stats_file_path, clock_mhz=866.0):
     with open(stats_file_path, 'r') as f:
         content = f.read()
 
-    # Split on "---------- End Simulation Statistics ----------"
-    dumps = content.split("---------- End Simulation Statistics ----------")
+    # Split on "---------- End Simulation Statistics ----------" with robust whitespace matching
+    dumps = re.split(r'-+\s*End Simulation Statistics\s*-+', content)
+    dumps = [d for d in dumps if d.strip()]
     if len(dumps) < 2:
         print("Warning: Only 1 stats dump found (missing ROI markers). Parsing Dump 0.")
-        roi_dump = dumps[0]
+        roi_dump = dumps[0] if dumps else ""
     else:
         # Dump 1 is the Region of Interest (between reset_stats and dump_stats)
         roi_dump = dumps[1]
@@ -26,9 +27,13 @@ def parse_roi_stats(stats_file_path, clock_mhz=866.0):
         'sim_ticks': 0,
         'roi_cycles': 0,
         'avg_packet_latency': 0.0,
+        'avg_network_latency': 0.0,
+        'avg_queueing_latency': 0.0,
+        'avg_hops': 0.0,
         'packets_injected': 0,
         'l2_demand_hits': 0,
-        'l2_demand_misses': 0
+        'l2_demand_misses': 0,
+        'l2_demand_accesses': 0
     }
 
     sim_ticks_m = re.search(r'simTicks\s+([0-9]+)', roi_dump)
@@ -46,15 +51,29 @@ def parse_roi_stats(stats_file_path, clock_mhz=866.0):
     if pkt_lat_m:
         metrics['avg_packet_latency'] = float(pkt_lat_m.group(1))
 
+    net_lat_m = re.search(r'system\.ruby\.network\.average_packet_network_latency\s+([0-9.]+)', roi_dump)
+    if net_lat_m:
+        metrics['avg_network_latency'] = float(net_lat_m.group(1))
+
+    queue_lat_m = re.search(r'system\.ruby\.network\.average_packet_queueing_latency\s+([0-9.]+)', roi_dump)
+    if queue_lat_m:
+        metrics['avg_queueing_latency'] = float(queue_lat_m.group(1))
+
+    hops_m = re.search(r'system\.ruby\.network\.average_hops\s+([0-9.]+)', roi_dump)
+    if hops_m:
+        metrics['avg_hops'] = float(hops_m.group(1))
+
     pkt_inj_m = re.search(r'system\.ruby\.network\.packets_injected::total\s+([0-9]+)', roi_dump)
     if pkt_inj_m:
         metrics['packets_injected'] = int(pkt_inj_m.group(1))
 
-    # Sum L2 demand hits and misses across all 64 L2 banks
-    l2_hits = sum(int(x) for x in re.findall(r'system\.ruby\.l2_cntrl[0-9]+\.demand_hits\s+([0-9]+)', roi_dump))
-    l2_miss = sum(int(x) for x in re.findall(r'system\.ruby\.l2_cntrl[0-9]+\.demand_misses\s+([0-9]+)', roi_dump))
+    # Sum L2 demand hits, misses, and accesses across all L2 banks
+    l2_hits = sum(int(x) for x in re.findall(r'system\.ruby\.l2_cntrl[0-9]+(?:\.L2cache)?\.(?:m_)?demand_hits\s+([0-9]+)', roi_dump))
+    l2_miss = sum(int(x) for x in re.findall(r'system\.ruby\.l2_cntrl[0-9]+(?:\.L2cache)?\.(?:m_)?demand_misses\s+([0-9]+)', roi_dump))
+    l2_accs = sum(int(x) for x in re.findall(r'system\.ruby\.l2_cntrl[0-9]+(?:\.L2cache)?\.(?:m_)?demand_accesses\s+([0-9]+)', roi_dump))
     metrics['l2_demand_hits'] = l2_hits
     metrics['l2_demand_misses'] = l2_miss
+    metrics['l2_demand_accesses'] = l2_accs
 
     return metrics
 
