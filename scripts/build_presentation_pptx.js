@@ -199,7 +199,7 @@ function addCalloutBanner(slide, { x, y, w, h, titleText, bodyText }) {
   // 4 Scope & Highlights cards anchoring bottom-left
   const scopeItems = [
     { title: '100 NUMA Runs', sub: '100% verification of Fig. 7 across 5 benchmarks on 48 cores', col: C.ink },
-    { title: '64-Tile Mesh Simulator', sub: 'Cycle-accurate 2D Manhattan latency model (11/11 tests)', col: C.ink },
+    { title: '64-Tile Mesh Simulator', sub: 'Analytical 2D Manhattan latency model (11/11 tests)', col: C.ink },
     { title: 'SparseLU Paradox Discovered', sub: '+15.1% slowdown under naive locality dealing proven', col: 'B91C1C' },
     { title: 'NOVA Co-Scheduler', sub: 'Adaptive co-scheduling combining affinity with queue balance', col: '047857' }
   ];
@@ -695,7 +695,7 @@ function addCalloutBanner(slide, { x, y, w, h, titleText, bodyText }) {
     fontFace: 'Arial Black', fontSize: 26, color: C.ink, bold: true, align: 'center', valign: 'middle'
   });
 
-  slide.addText('56 simulation configurations across 64 cores · 10 vs 38+2·hop cycle-accurate 2D mesh model', {
+  slide.addText('56 simulation configurations across 64 cores · 10 vs 38+2·hop analytical 2D mesh model', {
     x: 0.8, y: 1.6, w: 10.0, h: 0.25,
     fontFace: 'Courier New', fontSize: 10, color: C.inkMuted
   });
@@ -743,7 +743,7 @@ function addCalloutBanner(slide, { x, y, w, h, titleText, bodyText }) {
   });
 
   const meshPoints = [
-    { title: '• Cycle-Accurate Latency: ', body: '10 cycles local L2 bank vs 38+2·hop remote formula across all 64 tiles.' },
+    { title: '• Analytical Latency: ', body: '10 cycles local L2 bank vs 38+2·hop remote formula across all 64 tiles (closed-form model).' },
     { title: '• Network Diameter Limits: ', body: '14 hops between corners ((7-0)+(7-0)) = 66 cycles max latency.' },
     { title: '• Coarse Buffer Homing: ', body: 'Array homed on Tile 0 yields 0 steals on Map, but chokes bisection on stencils.' },
     { title: '• Fine Cache Striping: ', body: 'Striping lines avoids hot spots but raises base access latency to ~52 cycles.' }

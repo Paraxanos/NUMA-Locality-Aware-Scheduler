@@ -283,7 +283,7 @@ function footer(slide: PptxGenJS.Slide, text: string, n: number) {
   s.addText('TILEPro64 8×8 Mesh:', { x: 0.45, y: 0.85, w: 12, h: 0.8, fontSize: 42, bold: true, color: INK, fontFace: FONTS.display, charSpacing: -3 });
   s.addShape(pres.ShapeType.roundRect, { x: 6.2, y: 1.55, w: 6.7, h: 0.7, rectRadius: 0.08, fill: { color: CANARY }, line: { color: INK, width: 2.5 } });
   s.addText('Locality Across 64 Tiles', { x: 6.3, y: 1.6, w: 6.5, h: 0.6, fontSize: 30, bold: true, color: INK, fontFace: FONTS.display, charSpacing: -2, valign: 'middle' });
-  s.addText('56 simulation configurations across 64 cores · 10 vs 38+2·hop cycle-accurate 2D mesh model', { x: 0.45, y: 2.35, w: 12, h: 0.3, fontSize: 14, color: '#4B5563', fontFace: FONTS.body, italic: true });
+  s.addText('56 simulation configurations across 64 cores · 10 vs 38+2·hop analytical 2D mesh model', { x: 0.45, y: 2.35, w: 12, h: 0.3, fontSize: 14, color: '#4B5563', fontFace: FONTS.body, italic: true });
 
   const cardW = 5.95, cardH = 4.15;
 
@@ -312,7 +312,7 @@ function footer(slide: PptxGenJS.Slide, text: string, n: number) {
   s.addText('// Hop-distance routing, bisection limits, and data distribution:', { x: 7.15, y: 3.16, w: cardW - 0.6, h: 0.22, fontSize: 9, color: '#4B5563', fontFace: FONTS.mono });
 
   const mpoints = [
-    '• Cycle-Accurate Latency: Modeled 10 cycles local L2 and 38+2·hop remote formula.',
+    '• Analytical Latency: 10-cycle local L2, 38+2·hop remote (closed-form, not cycle-accurate).',
     '• Network Diameter: Max 14 hops between corners ((7-0)+(7-0)) = 66 cycles max latency.',
     '• Coarse Allocation: Array on Tile 0 yields 0 steals on Map, but chokes stencils.',
     '• Fine Allocation: Striping avoids hot spots but raises base latency to ~52 cycles.',

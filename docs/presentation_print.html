@@ -240,7 +240,7 @@
         </div>
         <div style="background: #FFFFFF; border: 2px solid #111827; border-radius: 10px; padding: 12px 14px; box-shadow: 3px 3px 0px #111827;">
           <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15.5px; font-weight: 700; color: #111827;">64-Tile Mesh Simulator</div>
-          <div style="font-size: 12.5px; color: #4B5563; font-family: 'JetBrains Mono', monospace; margin-top: 4px; line-height: 1.35;">Cycle-accurate 2D Manhattan latency model (11/11 tests pass)</div>
+          <div style="font-size: 12.5px; color: #4B5563; font-family: 'JetBrains Mono', monospace; margin-top: 4px; line-height: 1.35;">Analytical 2D Manhattan latency model (11/11 tests pass)</div>
         </div>
         <div style="background: #FFFFFF; border: 2px solid #111827; border-radius: 10px; padding: 12px 14px; box-shadow: 3px 3px 0px #111827;">
           <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15.5px; font-weight: 700; color: #B91C1C;">SparseLU Paradox Discovered</div>
@@ -572,7 +572,7 @@
     <div class="slide-title">
       TILEPro64 8×8 Mesh: <span class="highlight-box">Locality Across 64 Tiles</span>
     </div>
-    <div class="slide-subtitle">56 simulation configurations across 64 cores · 10 vs 38+2·hop cycle-accurate 2D mesh model</div>
+    <div class="slide-subtitle">56 simulation configurations across 64 cores · 10 vs 38+2·hop analytical 2D mesh model</div>
   </div>
 
   <div class="grid-2">
@@ -607,7 +607,7 @@
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #4B5563; margin-bottom: 12px;">// Hop-distance routing, bisection limits, and data distribution</div>
 
         <ul class="spec-list" style="font-size: 14px; gap: 9px;">
-          <li><strong>Cycle-Accurate Formula:</strong> Verified against 10-cycle local L2 and 38+2·hop remote formulas across all 64 tiles.</li>
+          <li><strong>Analytical Formula:</strong> Validated by 11/11 unit tests against 10-cycle local L2 and 38+2·hop remote costs (closed-form model, not cycle-accurate).</li>
           <li><strong>Network Diameter Limits:</strong> 14 hops between opposite corners ((7-0)+(7-0)) = 66 cycles max latency.</li>
           <li><strong>Coarse Data Allocation:</strong> Homing array on Tile 0 yields 0 steals on Map, but chokes bisection on stencils.</li>
           <li><strong>Fine Data Allocation:</strong> Striping lines avoids hot spots but raises base access latency to ~52 cycles.</li>

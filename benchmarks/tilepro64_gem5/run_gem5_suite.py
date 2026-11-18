@@ -1,16 +1,44 @@
 #!/usr/bin/env python3
-"""TILEPro64 gem5 Experimental Suite Runner & Evaluator.
+"""TILEPro64 gem5 Experimental Suite — HOST STUB / ANALYTICAL MODEL, NOT A gem5 RUN.
 
-Executes:
-1. Latency Calibration Microbenchmark across 64 tiles and 0-14 Manhattan hops.
-2. The complete 40-configuration production experiment matrix:
+IMPORTANT FIDELITY NOTICE (read before citing any output of this script):
+
+This script does NOT execute anything inside gem5. It runs two native host
+binaries (`bench_gem5`, `calibrate_latency`) on the machine that invokes it,
+and every cycle/hit-ratio/steal number written to `results/tilepro64_gem5/matrix.csv`
+is produced by hardcoded formulas in `run_experiment_matrix()` below — not by
+measurement. Specifically:
+
+  * `simulated_cycles` is `base_work_cycles (+ imbalance factor) + comm_cycles`
+    where `comm_cycles` is a hand-written expression over Manhattan distance.
+  * `l2_hit_ratio` is one of five constants (0.985 / 0.910 / 0.820 / 0.740 / 0.690)
+    selected by configuration; it is never measured.
+  * `steals_est` is a closed-form expression (e.g. `63`, `max(2, 16 - vic)`).
+  * `exec_time_ms` IS measured (host wall clock of the native binary).
+  * `calibrate_latency` emits `Measured_Cycles = 0` on hosts where `cntvct_el0`
+    is not readable (e.g. macOS arm64 without kernel support); the plotted
+    "calibration" curve is the closed-form `38 + 2 * hops` expectation only.
+
+The `bench_gem5` binary likewise spawns 64 host pthreads and asserts/places no
+tiles; it models the scheduling policy but does not pin to physical tiles, and it
+executes no gem5 guest code.
+
+To produce genuine cycle-accurate numbers, the workloads must be built against
+gem5's `m5` ops and run under `gem5.opt` with the `TilePro64_Mesh` Ruby/Garnet
+configuration (see `docs/tilepro64_to_gem5_migration_plan.md`). Until then, treat
+`matrix.csv` and `tilepro64_gem5_evaluation.png` as an analytical projection of
+the analytical simulator in `tilepro64/`, not as a gem5 evaluation result.
+
+What this script does:
+1. Runs the host latency-model probe and records `hops -> expected_cycles`.
+2. Emits the 40-configuration production matrix as an analytical model:
    - Suite A: Baseline WS Global (Coarse) - 2 runs
    - Suite B: Baseline WS Global (Fine) - 2 runs
    - Suite C: Vicinity WS Sweep (d in {1, 2, 4}) - 12 runs
    - Suite D: Locality-Aware Coarse (d=1, 0 steals) - 2 runs
    - Suite E: Locality-Aware Fine Sweep (d in {1, 2, 3, 4, 6, 8, 14}) - 14 runs
    - Suite F: LA Coarse Load-Imbalance (d in {1, 2, 4, 8}) - 8 runs
-   Total = 40 runs.
+   Total = 40 configurations (modelled, not measured).
 3. Generates results/tilepro64_gem5/matrix.csv and comparative plots.
 """
 import os
@@ -55,8 +83,11 @@ def run_latency_calibration():
 
 
 def run_experiment_matrix():
-    print("=== Running 40-Configuration Production Matrix ===")
+    print("=== Running 40-Configuration ANALYTICAL MATRIX (host, not gem5) ===")
     binary = GEM5_BENCH_DIR / "bench_gem5"
+    print("NOTE: simulated_cycles / l2_hit_ratio / steals_est below are closed-form")
+    print("      model outputs, not measurements. Only exec_time_ms is measured")
+    print("      (host wall clock of the native binary).\n")
     
     # 40 configurations from Section 3 of Migration Plan
     matrix_specs = []
@@ -174,7 +205,7 @@ def run_experiment_matrix():
         writer.writeheader()
         writer.writerows(results)
         
-    print(f"\nAll 40 runs completed. Matrix saved to {out_csv}.\n")
+    print(f"\nAll 40 modelled configurations written. Matrix saved to {out_csv}.\n")
     return results
 
 
@@ -220,11 +251,11 @@ def plot_evaluation(calib_csv, matrix_rows):
     
     # Panel A: Latency Calibration
     ax_a = axes[0, 0]
-    ax_a.plot(sorted_hops, exp_cycles, "o-", color="#1f77b4", linewidth=2, label="Calibrated Model (38 + 2H)")
+    ax_a.plot(sorted_hops, exp_cycles, "o-", color="#1f77b4", linewidth=2, label="Closed-form model (38 + 2H)")
     ax_a.axhline(10, color="green", linestyle="--", label="Local L2 Hit (10 cyc)")
     ax_a.set_xlabel("Manhattan Distance (Mesh Hops)")
     ax_a.set_ylabel("Round-Trip Latency (Cycles)")
-    ax_a.set_title("Panel A: Garnet NoC Latency Calibration (866 MHz)")
+    ax_a.set_title("Panel A: Analytical latency model (not gem5-calibrated)")
     ax_a.grid(True, alpha=0.3)
     ax_a.legend()
     
@@ -235,7 +266,7 @@ def plot_evaluation(calib_csv, matrix_rows):
     ax_b.plot([1, 2, 4, 14], [c / 1000 for c in ws_coarse_map], "x--", color="#d62728", linewidth=2, label="WS Coarse Baseline")
     ax_b.set_xlabel("Vicinity Radius (d)")
     ax_b.set_ylabel("Makespan (kCycles)")
-    ax_b.set_title("Panel B: Vicinity Radius Sweep vs Golden Case (Map)")
+    ax_b.set_title("Panel B: Vicinity Radius Sweep vs Golden Case (Map, modelled)")
     ax_b.grid(True, alpha=0.3)
     ax_b.legend()
     
@@ -247,7 +278,7 @@ def plot_evaluation(calib_csv, matrix_rows):
     bars = ax_c.bar(configs, hit_rates, color=colors, width=0.55)
     ax_c.set_ylabel("L2 Home Cache Hit Rate (%)")
     ax_c.set_ylim(0, 110)
-    ax_c.set_title("Panel C: Cache Hit Rate by Policy (48 KB Buffers)")
+    ax_c.set_title("Panel C: Assumed L2 Hit Rate by Policy (48 KB Buffers, not measured)")
     ax_c.grid(axis="y", alpha=0.3)
     for bar in bars:
         yval = bar.get_height()
@@ -269,7 +300,7 @@ def plot_evaluation(calib_csv, matrix_rows):
     ax_d.plot(imb_radii, imb_vec_cycles, "v-", color="#8c564b", linewidth=2, label="Vecmul (25% Imbalance)")
     ax_d.set_xlabel("Vicinity Radius (d)")
     ax_d.set_ylabel("Makespan (kCycles)")
-    ax_d.set_title("Panel D: Vicinity Stealing under 25% Compute Imbalance")
+    ax_d.set_title("Panel D: Vicinity Stealing, 25% Imbalance (modelled)")
     ax_d.grid(True, alpha=0.3)
     ax_d.legend()
     

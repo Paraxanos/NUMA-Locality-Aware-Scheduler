@@ -82,9 +82,8 @@ def main():
     ax2.grid(axis="y", linestyle="--", alpha=0.6)
     ax2.legend(title="Configuration", fontsize=9, loc="upper right")
 
-    fig.suptitle("TILEPro64 8×8 Mesh Architecture: Locality-Aware vs Work-Stealing Baseline", fontsize=14, fontweight="bold", y=0.98)
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.88)
+    fig.suptitle("TILEPro64 8×8 Mesh Architecture: Locality-Aware vs Work-Stealing Baseline", fontsize=14, fontweight="bold", y=0.995)
+    plt.tight_layout(rect=(0, 0, 1, 0.93))
     plt.savefig(OUT_PNG, dpi=180)
     print(f"Successfully generated result chart -> {OUT_PNG}")
 

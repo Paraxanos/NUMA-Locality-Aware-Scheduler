@@ -108,13 +108,24 @@ To resolve the SparseLU paradox, we developed the **NOVA** co-scheduler:
 
 ## 3. gem5 / Garnet 3.0 Cycle-Accurate Migration (`benchmarks/tilepro64_gem5/`)
 
-For cycle-accurate microarchitectural evaluation, the staged migration path has been fully implemented and evaluated:
-- **Topology:** Custom 8×8 mesh (`gem5/configs/topologies/TilePro64_Mesh.py` and `benchmarks/tilepro64_gem5/TilePro64_Mesh.py`) with 64 Garnet routers, 64 L1/L2 caches, and 4 perimeter memory controllers.
-- **Verification:** Built and verified with gem5 `v23.0.1.0` (`X86_MESI_Two_Level`) running 16-core mini-mesh and 64-core full-mesh Ruby random tests in Garnet 3.0.
-- **Microbenchmarks & Evaluation Suite (`benchmarks/tilepro64_gem5/`):**
-  - `calibrate_latency.c`: Point-to-point round-trip latency calibration microbenchmark measuring access cycles across Manhattan distances 0 to 14.
-  - `bench_gem5.c`: Multi-threaded benchmark implementing the full 40-configuration production matrix (Map & Vecmul kernels, WS vs. LA, Coarse vs. Fine homing, Vicinity sweeps $d \in \{1, 2, 3, 4, 6, 8, 14\}$, and 25% compute imbalance).
-  - `run_gem5_suite.py`: Automated harness executing the 40-run matrix, saving [results/tilepro64_gem5/matrix.csv](file:///Users/yeschirag/Desktop/college/HPC%20project/results/tilepro64_gem5/matrix.csv) and generating 4-panel publication-grade plots in [results/tilepro64_gem5/tilepro64_gem5_evaluation.png](file:///Users/yeschirag/Desktop/college/HPC%20project/results/tilepro64_gem5/tilepro64_gem5_evaluation.png).
+**Status: staged and partially verified — not a completed cycle-accurate evaluation.**
+
+What is verified:
+- **Topology:** Custom 8×8 mesh (`gem5/configs/topologies/TilePro64_Mesh.py` and `benchmarks/tilepro64_gem5/TilePro64_Mesh.py`) with 64 Garnet routers, 64 L1/L2 caches, and 4 perimeter memory controllers. It parameterizes both 4×4 and 8×8 meshes.
+- **gem5 build & smoke tests:** gem5 `v23.0.1.0` (`X86_MESI_Two_Level`) builds on this host, and the custom topology loads and exits cleanly on 16-core and 64-core Ruby random tests in Garnet 3.0. No benchmark kernel has been run under gem5 yet.
+
+What is *not* measured (important):
+- The 40-configuration matrix in `results/tilepro64_gem5/matrix.csv` is an **analytical projection**, not a gem5 result. `run_gem5_suite.py` runs the native host binaries and emits closed-form values for `simulated_cycles`, `l2_hit_ratio` (five hardcoded constants: 0.985 / 0.910 / 0.820 / 0.740 / 0.690) and `steals_est`. Only `exec_time_ms` is measured host wall-clock time.
+- `bench_gem5.c` spawns 64 host pthreads and does not pin threads to tiles, does not execute inside gem5, and emits no cycle counts. The `sched_getcpu()` assertion compiled for Linux is a no-op stub on macOS.
+- `calibrate_latency.c` reports `Measured_Cycles = 0` on this host (`cntvct_el0` reads 0), so `latency_calibration.csv` contains the closed-form `38 + 2 * hops` expectation only; nothing is measured.
+- `tilepro64_gem5_evaluation.png` therefore visualizes the analytical model, congruent with Tier 3 in the taxonomy above — **not** Tier 4 gem5 output.
+
+**Migration plan vs. implementation:** the staged plan in [`docs/tilepro64_to_gem5_migration_plan.md`](docs/tilepro64_to_gem5_migration_plan.md) targets SE-mode execution of the real kernels under `gem5.opt` with m5-op ROI annotations. That has not happened. To get Tier 4 numbers: build the benchmarks against gem5's `m5` API, run each of the 40 configurations under `X86_MESI_Two_Level` with the `TilePro64_Mesh` topology, and re-derive `matrix.csv` from `m5out/stats.txt` (see `scripts/parse_gem5_stats.py`).
+
+- **Evaluation suite (`benchmarks/tilepro64_gem5/`):**
+  - `calibrate_latency.c`: round-trip latency probe over Manhattan distances 0–14 (currently emits the closed-form expectation; measurement path requires a host/gem5 build where the cycle counter is readable).
+  - `bench_gem5.c`: host model of the scheduling policies (Map/Vecmul, WS/LA, Coarse/Fine homing, vicinity and 25% imbalance) used to drive the analytical matrix.
+  - `run_gem5_suite.py`: emits the 40-configuration **analytical** matrix to `results/tilepro64_gem5/matrix.csv` and the 4-panel chart to `results/tilepro64_gem5/tilepro64_gem5_evaluation.png`.
 
 ---
 
@@ -130,7 +141,7 @@ cd tilepro64 && make test && make results && cd ..
 # 3. Regenerate NUMA baseline Figure 7 plot (zero-dependency)
 python3 harness/plot_fig7.py
 
-# 4. Run TILEPro64 gem5 evaluation suite and generate comparative charts
+# 4. Emit the analytical projection of the 40-configuration gem5 matrix (not a gem5 run)
 python3 benchmarks/tilepro64_gem5/run_gem5_suite.py
 
 # 5. View presentation
