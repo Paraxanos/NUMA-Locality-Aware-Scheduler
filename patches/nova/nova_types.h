@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdatomic.h>
+#include <pthread.h>
 
 #define NOVA_SHADOW_K       8
 #define NOVA_EPOCH_OPS      64
@@ -27,6 +28,19 @@ struct alloc_coordinator_t {
     _Atomic(struct alloc_context_t*) current;
     _Atomic uint64_t            op_counter[NOVA_MAX_NODES];
     _Atomic uint32_t            refreshing[NOVA_MAX_NODES];
+
+    // Monotonic steal counters updated atomically by workers
+    _Atomic uint64_t            steal_ok_count[NOVA_MAX_NODES];
+    _Atomic uint64_t            steal_fail_count[NOVA_MAX_NODES];
+
+    // Tracking state for EWMA calculation across epochs
+    uint64_t                    last_steal_ok[NOVA_MAX_NODES];
+    uint64_t                    last_steal_fail[NOVA_MAX_NODES];
+    float                       steal_ok_ewma[NOVA_MAX_NODES];
+    float                       steal_fail_ewma[NOVA_MAX_NODES];
+
+    // Reader-writer lock guarding context buffer updates
+    pthread_rwlock_t            buf_lock;
 };
 
 // Shadow Index entry
@@ -38,7 +52,8 @@ struct shadow_entry_t {
 
 struct shadow_index_t {
     struct shadow_entry_t       entries[NOVA_SHADOW_K];
-    _Atomic uint32_t            head;
+    uint32_t                    head;
+    pthread_mutex_t             lock;
 };
 
 #endif // NOVA_TYPES_H

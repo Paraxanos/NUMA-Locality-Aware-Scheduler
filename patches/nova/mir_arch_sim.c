@@ -1,4 +1,4 @@
-#include "arch/mir_arch_sim.h"
+#include "mir_arch_sim.h"
 #include <stdlib.h>
 #include <math.h>
 

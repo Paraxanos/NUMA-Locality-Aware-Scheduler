@@ -11,6 +11,11 @@ Thumbs.db
 tilepro64/bin/
 build/
 gem5/
+m5out/
+tests/test_nova_queue_race
+tests/test_nova_concurrency
+benchmarks/tilepro64_gem5/bench_gem5
+benchmarks/tilepro64_gem5/calibrate_latency
 *.o
 *.so
 *.dylib

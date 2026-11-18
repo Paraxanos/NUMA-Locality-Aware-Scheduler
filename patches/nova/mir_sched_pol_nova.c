@@ -51,6 +51,10 @@ static void nova_destroy(void) {
     }
     mir_free_int(sp->queues, sizeof(struct mir_task_queue_t*) * sp->num_queues);
     sp->queues = NULL;
+    nova_coordinator_destroy(&g_coordinator);
+    for (int i = 0; i < NOVA_MAX_NODES; i++) {
+        nova_shadow_destroy(&g_shadow_indices[i]);
+    }
 }
 
 int nova_push(struct mir_worker_t* worker, struct mir_task_t* task) {

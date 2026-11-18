@@ -1,10 +1,10 @@
 #include "nova_cost.h"
-#include "../../arch/mir_arch_sim.h"
-#include "../../mir_mem_pol.h"
+#include "mir_arch_sim.h"
+#include "mir_mem_pol.h"
 
 // Helper: get footprint bytes from task
 static uint64_t mir_task_get_read_footprint_bytes(struct mir_task_t* task) {
-    if (!task || !task->dist_by_access_type || task->num_data_footprints == 0) return 0;
+    if (!task || task->num_data_footprints == 0) return 0;
     struct mir_mem_node_dist_t* dist = (struct mir_mem_node_dist_t*)task->dist_by_access_type[MIR_DATA_ACCESS_READ];
     if (!dist || !dist->buf) return 0;
     uint64_t sum = 0;

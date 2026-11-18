@@ -1,5 +1,5 @@
 diff --git a/src/mir_mem_pol.c b/src/mir_mem_pol.c
-index 9ce15b2..701c6b8 100644
+index 9ce15b2..89330a5 100644
 --- a/src/mir_mem_pol.c
 +++ b/src/mir_mem_pol.c
 @@ -132,7 +132,7 @@ void mir_mem_node_dist_get_stat(struct mir_mem_node_dist_stat_t* stat, const str
@@ -11,45 +11,10 @@ index 9ce15b2..701c6b8 100644
      }
      stat->sd = sqrt(sum_dsq / (runtime->arch->num_nodes));
  } /*}}}*/
-@@ -236,19 +236,7 @@ static inline void reset_node()
- static inline void advance_node()
- { /*{{{*/
-     mir_lock_set(&mem_pol->lock);
--advance:
--    mem_pol->node++;
--    mem_pol->node = mem_pol->node % runtime->arch->num_nodes;
--#ifdef MIR_MEM_POL_RESTRICT
--    int allowed = 0;
--    for (int i = 0; i < runtime->num_workers; i++)
--        if (runtime->arch->node_of(runtime->workers[i].cpu_id) == mem_pol->node) {
--            allowed = 1;
--            break;
--        }
--    if (!allowed)
--        goto advance;
--#endif
-+    mem_pol->node = 0;
-     mir_lock_unset(&mem_pol->lock);
- } /*}}}*/
- 
 diff --git a/src/mir_mem_pol.h b/src/mir_mem_pol.h
-index 0f51164..a6f9446 100644
+index 0f51164..45bddc3 100644
 --- a/src/mir_mem_pol.h
 +++ b/src/mir_mem_pol.h
-@@ -26,11 +26,11 @@ void mir_mem_pol_destroy();
- 
- // Memory node distribution related
- 
--struct mir_mem_node_dist_t { /*{{{*/
-+struct mir_mem_node_dist_t { /*{{*/
-     size_t* buf;
- }; /*}}}*/
- 
--struct mir_mem_node_dist_stat_t { /*{{{*/
-+struct mir_mem_node_dist_stat_t { /*{{*/
-     size_t sum;
-     size_t min;
-     size_t max;
 @@ -47,6 +47,12 @@ void mir_mem_get_mem_node_dist(struct mir_mem_node_dist_t* dist, void* addr, siz
  void mir_mem_node_dist_get_stat(struct mir_mem_node_dist_stat_t* stat, const struct mir_mem_node_dist_t* dist);
  
@@ -63,114 +28,226 @@ index 0f51164..a6f9446 100644
  #else
  #define mir_mem_pol_create() ;
  #define mir_mem_pol_destroy() ;
-@@ -55,4 +61,4 @@ unsigned long mir_mem_node_dist_get_comm_cost(const struct mir_mem_node_dist_t*
- #endif
- END_C_DECLS
- 
--#endif /* end of include guard: MIR_MEM_POL_H */
-+#endif /* end of include guard: MIR_MEM_POL_H */
-\ No newline at end of file
-diff --git a/src/mir_queue.c b/src/mir_queue.c
-index 17d28fd..c8102a5 100644
---- a/src/mir_queue.c
-+++ b/src/mir_queue.c
-@@ -3,6 +3,8 @@
- #include "mir_memory.h"
- #include "mir_queue.h"
+diff --git a/src/mir_task_queue.c b/src/mir_task_queue.c
+index 7db1dc4..75df89d 100644
+--- a/src/mir_task_queue.c
++++ b/src/mir_task_queue.c
+@@ -5,6 +5,7 @@
  #include "mir_utils.h"
-+#include "mir_runtime.h"
+ #include "mir_task.h"
+ #include "mir_runtime.h"
 +#include "scheduling/mir_sched_pol.h"
  
- struct mir_queue_t* mir_queue_create(uint32_t capacity)
+ void* mir_task_queue_create(uint32_t capacity)
  { /*{{{*/
-@@ -100,3 +102,57 @@ uint32_t mir_queue_size(const struct mir_queue_t* queue)
-     return size;
+@@ -69,35 +70,40 @@ struct mir_task_t* mir_task_queue_pop(struct mir_task_queue_t* queue)
+     struct mir_task_t* task = NULL;
+ 
+     mir_lock_set(&(queue->deq_lock));
+-    if (TASK_QUEUE_EMPTY(queue)) {
+-        TQ_DBG("queue empty!", queue);
+-        goto cleanup;
++
++    while (!TASK_QUEUE_EMPTY(queue)) {
++        struct mir_task_t* cand = queue->buffer[queue->out];
++        queue->buffer[queue->out] = NULL;
++        queue->out++;
++        if (queue->out >= queue->capacity)
++            queue->out -= queue->capacity;
++        __sync_fetch_and_sub(&(queue->size), 1);
++
++        if (cand != NULL) {
++            // Atomically claim task: ensures single-ownership invariant
++            if (__sync_bool_compare_and_swap(&cand->taken, 0, 1)) {
++                task = cand;
++                break;
++            }
++            // cand was already claimed by a thief; skip and try next task
++        }
+     }
+-    task = queue->buffer[queue->out];
+-    MIR_ASSERT(task != NULL);
++
+ #ifdef MIR_GPL
+-    struct mir_worker_t* worker = mir_worker_get_context();
+-    if (!runtime->single_parallel_block && task->team) {
+-        // The private queue is FIFO ordered. We have either already
+-        // executed the parallel block or will execute it right now.
+-        //
+-        // If we are stealing from another queue, ensure we have executed
+-        // our parallel block first.
+-        if ((void *)queue == worker->private_queue)
+-            task->team->parallel_block_flag[worker->id] = 1;
+-        else if (task->team->parallel_block_flag[worker->id] == 0) {
+-            task = NULL;
+-            goto cleanup;
+-	}
++    if (task != NULL) {
++        struct mir_worker_t* worker = mir_worker_get_context();
++        if (!runtime->single_parallel_block && task->team) {
++            if ((void *)queue == worker->private_queue)
++                task->team->parallel_block_flag[worker->id] = 1;
++            else if (task->team->parallel_block_flag[worker->id] == 0) {
++                task = NULL;
++                goto cleanup;
++            }
++        }
+     }
++cleanup:
+ #endif
+ 
+-    __sync_fetch_and_sub(&(queue->size), 1);
+-    queue->out++;
+-    if (queue->out >= queue->capacity)
+-        queue->out -= queue->capacity;
+-
+-cleanup:
+     mir_lock_unset(&(queue->deq_lock));
+ 
+     return task;
+@@ -110,4 +116,120 @@ uint32_t mir_task_queue_size(const struct mir_task_queue_t* queue)
+     return queue->size;
  } /*}}}*/
  
-+// NOVA: Get queue size for a specific node's main queue
-+uint32_t mir_get_node_queue_size(uint16_t node_id) {
-+    if (!runtime || !runtime->sched_pol || node_id >= runtime->sched_pol->num_queues) return 0;
-+    struct mir_queue_t* queue = (struct mir_queue_t*)runtime->sched_pol->queues[node_id];
-+    return mir_queue_size(queue);
++// NOVA: Atomically claim and physically remove a specific task from queue
++int mir_task_queue_lock_and_remove(struct mir_task_queue_t* queue, struct mir_task_t* task)
++{
++    if (!queue || !task) return 0;
++
++    // Acquire locks in canonical order: deq_lock then enq_lock
++    mir_lock_set(&(queue->deq_lock));
++    mir_lock_set(&(queue->enq_lock));
++
++    if (TASK_QUEUE_EMPTY(queue)) {
++        mir_lock_unset(&(queue->enq_lock));
++        mir_lock_unset(&(queue->deq_lock));
++        return 0;
++    }
++
++    int found = 0;
++    uint32_t found_offset = 0;
++
++    // Locate task in circular buffer
++    for (uint32_t i = 0; i < queue->size; i++) {
++        uint32_t idx = (queue->out + i) % queue->capacity;
++        if (queue->buffer[idx] == task) {
++            found = 1;
++            found_offset = i;
++            break;
++        }
++    }
++
++    if (!found) {
++        mir_lock_unset(&(queue->enq_lock));
++        mir_lock_unset(&(queue->deq_lock));
++        return 0;
++    }
++
++    // Attempt atomic ownership claim
++    if (!__sync_bool_compare_and_swap(&task->taken, 0, 1)) {
++        // Already taken by another thread; remove stale pointer from queue
++        for (uint32_t j = found_offset; j < queue->size - 1; j++) {
++            uint32_t dst = (queue->out + j) % queue->capacity;
++            uint32_t src = (queue->out + j + 1) % queue->capacity;
++            queue->buffer[dst] = queue->buffer[src];
++        }
++        uint32_t last = (queue->out + queue->size - 1) % queue->capacity;
++        queue->buffer[last] = NULL;
++        queue->in = (queue->in + queue->capacity - 1) % queue->capacity;
++        __sync_fetch_and_sub(&(queue->size), 1);
++
++        mir_lock_unset(&(queue->enq_lock));
++        mir_lock_unset(&(queue->deq_lock));
++        return 0;
++    }
++
++    // Successfully claimed! Shift subsequent elements to close gap
++    for (uint32_t j = found_offset; j < queue->size - 1; j++) {
++        uint32_t dst = (queue->out + j) % queue->capacity;
++        uint32_t src = (queue->out + j + 1) % queue->capacity;
++        queue->buffer[dst] = queue->buffer[src];
++    }
++    uint32_t last = (queue->out + queue->size - 1) % queue->capacity;
++    queue->buffer[last] = NULL;
++    queue->in = (queue->in + queue->capacity - 1) % queue->capacity;
++    __sync_fetch_and_sub(&(queue->size), 1);
++
++    mir_lock_unset(&(queue->enq_lock));
++    mir_lock_unset(&(queue->deq_lock));
++
++    return 1;
 +}
 +
-+// NOVA: Get the main queue for a node
-+struct mir_queue_t* mir_get_node_queue(uint16_t node_id) {
-+    if (!runtime || !runtime->sched_pol || node_id >= runtime->sched_pol->num_queues) return NULL;
-+    return (struct mir_queue_t*)runtime->sched_pol->queues[node_id];
-+}
++// NOVA: Pop a task from the tail/end of the queue (fallback stealing)
++struct mir_task_t* mir_task_queue_pop_end(struct mir_task_queue_t* queue)
++{
++    if (!queue) return NULL;
 +
-+// NOVA: Pop from end of node queue (for fallback stealing)
-+struct mir_task_t* mir_queue_pop_end(uint16_t node_id) {
-+    if (!runtime || !runtime->sched_pol || node_id >= runtime->sched_pol->num_queues) return NULL;
-+    struct mir_queue_t* queue = (struct mir_queue_t*)runtime->sched_pol->queues[node_id];
++    mir_lock_set(&(queue->deq_lock));
++    mir_lock_set(&(queue->enq_lock));
++
 +    struct mir_task_t* task = NULL;
-+    mir_queue_pop(queue, (void**)&task);
++
++    while (queue->size > 0) {
++        uint32_t last_idx = (queue->in + queue->capacity - 1) % queue->capacity;
++        struct mir_task_t* cand = queue->buffer[last_idx];
++        queue->buffer[last_idx] = NULL;
++        queue->in = last_idx;
++        __sync_fetch_and_sub(&(queue->size), 1);
++
++        if (cand != NULL) {
++            if (__sync_bool_compare_and_swap(&cand->taken, 0, 1)) {
++                task = cand;
++                break;
++            }
++            // cand was already claimed; continue popping previous
++        }
++    }
++
++    mir_lock_unset(&(queue->enq_lock));
++    mir_lock_unset(&(queue->deq_lock));
++
 +    return task;
 +}
 +
-+// NOVA: Lock and remove a specific task from a node queue
-+bool mir_queue_lock_and_remove(uint16_t node_id, struct mir_task_t* task) {
-+    if (!runtime || !runtime->sched_pol || node_id >= runtime->sched_pol->num_queues) return false;
-+    struct mir_queue_t* queue = (struct mir_queue_t*)runtime->sched_pol->queues[node_id];
-+
-+    mir_lock_set(&(queue->deq_lock));
-+    if (QUEUE_EMPTY(queue)) {
-+        mir_lock_unset(&(queue->deq_lock));
-+        return false;
-+    }
-+
-+    // Search for the task in the queue
-+    uint32_t idx = queue->out;
-+    for (uint32_t i = 0; i < queue->size; i++) {
-+        if (queue->buffer[idx] == task) {
-+            // Found it - shift elements to remove it
-+            // This is a simplified removal; in production, might need better approach
-+            for (uint32_t j = i; j < queue->size - 1; j++) {
-+                uint32_t src = (queue->out + j + 1) % queue->capacity;
-+                uint32_t dst = (queue->out + j) % queue->capacity;
-+                queue->buffer[dst] = queue->buffer[src];
-+            }
-+            queue->size--;
-+            mir_lock_unset(&(queue->deq_lock));
-+            return true;
-+        }
-+        idx = (idx + 1) % queue->capacity;
-+    }
-+
-+    mir_lock_unset(&(queue->deq_lock));
-+    return false;
++// NOVA: Access node task queue
++struct mir_task_queue_t* mir_get_node_task_queue(uint16_t node_id)
++{
++    if (!runtime || !runtime->sched_pol || node_id >= runtime->sched_pol->num_queues) return NULL;
++    return (struct mir_task_queue_t*)runtime->sched_pol->queues[node_id];
 +}
-\ No newline at end of file
-diff --git a/src/mir_queue.h b/src/mir_queue.h
-index 534e818..3719b5d 100644
---- a/src/mir_queue.h
-+++ b/src/mir_queue.h
-@@ -51,6 +51,16 @@ void mir_queue_pop(struct mir_queue_t* queue, void** data);
- // Get queue size
- uint32_t mir_queue_size(const struct mir_queue_t* queue);
++
++// NOVA: Get queue size for a specific node's task queue
++uint32_t mir_get_node_task_queue_size(uint16_t node_id)
++{
++    struct mir_task_queue_t* q = mir_get_node_task_queue(node_id);
++    if (!q) return 0;
++    return mir_task_queue_size(q);
++}
++
  
--END_C_DECLS
-+// NOVA: Get queue size for a specific node
-+uint32_t mir_get_node_queue_size(uint16_t node_id);
+diff --git a/src/mir_task_queue.h b/src/mir_task_queue.h
+index 3e9446b..4ca2cea 100644
+--- a/src/mir_task_queue.h
++++ b/src/mir_task_queue.h
+@@ -51,6 +51,12 @@ struct mir_task_t* mir_task_queue_pop(struct mir_task_queue_t* queue);
+ // Get task queue size
+ uint32_t mir_task_queue_size(const struct mir_task_queue_t* queue);
  
--#endif
-+// NOVA: Get the queue associated with a node
-+struct mir_queue_t* mir_get_node_queue(uint16_t node_id);
++// NOVA extensions: authoritative claim & removal, end popping, and node queue accessors
++int mir_task_queue_lock_and_remove(struct mir_task_queue_t* queue, struct mir_task_t* task);
++struct mir_task_t* mir_task_queue_pop_end(struct mir_task_queue_t* queue);
++struct mir_task_queue_t* mir_get_node_task_queue(uint16_t node_id);
++uint32_t mir_get_node_task_queue_size(uint16_t node_id);
 +
-+// NOVA: Pop from end of node queue
-+struct mir_task_t* mir_queue_pop_end(uint16_t node_id);
-+
-+// NOVA: Lock and remove a specific task from a node queue
-+bool mir_queue_lock_and_remove(uint16_t node_id, struct mir_task_t* task);
-+
-+#endif // MIR_QUEUE_H
-\ No newline at end of file
+ END_C_DECLS
+ 
+ #endif
 diff --git a/src/scheduling/mir_sched_pol.c b/src/scheduling/mir_sched_pol.c
-index cb765d9..0b02f7f 100644
+index cb765d9..c615715 100644
 --- a/src/scheduling/mir_sched_pol.c
 +++ b/src/scheduling/mir_sched_pol.c
-@@ -27,8 +27,10 @@ struct mir_sched_pol_t* mir_sched_pol_get_by_name(const char* name)
+@@ -27,6 +27,9 @@ struct mir_sched_pol_t* mir_sched_pol_get_by_name(const char* name)
      else if (0 == strcmp(name, "ws-de-node")) {
          return &policy_ws_de_node;
      }
@@ -180,7 +257,15 @@ index cb765d9..0b02f7f 100644
      else {
          return NULL;
      }
--} /*}}}*/
--
-+} /*}}}*/
-\ No newline at end of file
+diff --git a/src/scheduling/mir_sched_pol.h b/src/scheduling/mir_sched_pol.h
+index 9262ac3..44bc62c 100644
+--- a/src/scheduling/mir_sched_pol.h
++++ b/src/scheduling/mir_sched_pol.h
+@@ -20,6 +20,7 @@ extern struct mir_sched_pol_t policy_numa;
+ extern struct mir_sched_pol_t policy_central_stack;
+ extern struct mir_sched_pol_t policy_ws_de;
+ extern struct mir_sched_pol_t policy_ws_de_node;
++extern struct mir_sched_pol_t policy_nova;
+ 
+ struct mir_sched_pol_t {
+     // Data structures

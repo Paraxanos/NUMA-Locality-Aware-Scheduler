@@ -2,17 +2,21 @@
 #include "nova_cost.h"
 #include "nova_coordinator.h"
 #include "nova_shadow_index.h"
-#include "../../arch/mir_arch_sim.h"
-#include "../../mir_queue.h"
-#include "../../mir_task.h"
+#include "mir_arch_sim.h"
+#include "mir_task_queue.h"
+#include "mir_task.h"
 #include <stdlib.h>
 
 struct mir_task_t* nova_steal(struct alloc_coordinator_t* coord, struct shadow_index_t* shadow_indices,
                               uint32_t worker_id) {
+    if (!coord || !shadow_indices) return NULL;
+
     uint16_t thief_node = mir_arch_sim_node_of(worker_id);
     nova_coordinator_step_op(coord, thief_node);
 
     struct alloc_context_t* snap = nova_coordinator_get_snapshot(coord);
+    if (!snap) return NULL;
+
     uint32_t radius = snap->radius[worker_id];
     uint16_t num_nodes = mir_arch_sim_num_nodes();
 
@@ -27,6 +31,7 @@ struct mir_task_t* nova_steal(struct alloc_coordinator_t* coord, struct shadow_i
             if (hops > (num_nodes / 2)) hops = num_nodes - hops;
             if (hops != d) continue;
 
+            // 1. Try stealing via Shadow Index
             struct shadow_entry_t candidates[NOVA_SHADOW_K];
             uint32_t num_cands = nova_shadow_peek(&shadow_indices[target_node], candidates, NOVA_SHADOW_K);
 
@@ -44,22 +49,23 @@ struct mir_task_t* nova_steal(struct alloc_coordinator_t* coord, struct shadow_i
                 }
 
                 if (best_task != NULL) {
-                    // Mark taken to prevent double-steal
-                    best_task->taken = 1;
-                    nova_coordinator_report_steal(coord, thief_node, true);
-                    return best_task;
-                }
-            } else {
-                // Fallback: pop from target node's queue
-                // Use mir_queue_pop on the per-node queue (indexed by node_id)
-                struct mir_queue_t* queue = mir_queue_get_node_queue(target_node);
-                if (queue) {
-                    struct mir_task_t* fallback_task = NULL;
-                    mir_queue_pop(queue, (void**)&fallback_task);
-                    if (fallback_task != NULL) {
+                    struct mir_task_queue_t* vqueue = mir_get_node_task_queue(target_node);
+                    if (vqueue && mir_task_queue_lock_and_remove(vqueue, best_task)) {
+                        nova_shadow_invalidate(&shadow_indices[target_node], best_task);
                         nova_coordinator_report_steal(coord, thief_node, true);
-                        return fallback_task;
+                        return best_task;
                     }
+                }
+            }
+
+            // 2. Fallback: pop from end of target node's authoritative task queue
+            struct mir_task_queue_t* queue = mir_get_node_task_queue(target_node);
+            if (queue) {
+                struct mir_task_t* fallback_task = mir_task_queue_pop_end(queue);
+                if (fallback_task != NULL) {
+                    nova_shadow_invalidate(&shadow_indices[target_node], fallback_task);
+                    nova_coordinator_report_steal(coord, thief_node, true);
+                    return fallback_task;
                 }
             }
         }

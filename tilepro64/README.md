@@ -1,6 +1,10 @@
-# TILEPro64 Manycore Locality-Aware Task Scheduler & Architecture Model
+# TILEPro64 Manycore Locality-Aware Task Scheduler & Analytical Architecture Model
 
-A standalone C-based architectural model and locality-aware task scheduling simulator faithfully reproducing the **TILEPro64 manycore processor** portion of the research paper:
+> [!IMPORTANT]
+> **Simulation Fidelity Notice:**
+> The simulator in this directory is an **analytical simulator** that models Manhattan distance network latencies ($38 + 2 \times \text{hops}$) and algorithmic cache access penalties. It is **not** a cycle-accurate hardware-validated simulation and does not simulate router microarchitecture, crossbar contention, or flit serialization. For cycle-accurate microarchitectural and network-on-chip evaluation, refer to the staged gem5 / Garnet 3.0 migration plan in [`docs/tilepro64_to_gem5_migration_plan.md`](../docs/tilepro64_to_gem5_migration_plan.md).
+
+A standalone C-based analytical model and locality-aware task scheduling simulator reproducing the **TILEPro64 manycore processor** portion of the research paper:
 
 > **"Locality-Aware Task Scheduling and Data Distribution for OpenMP Programs on NUMA Systems and Manycore Processors"**  
 > *Ananya Muddukrishna, Peter A. Jonsson, Mats Brorsson (Scientific Programming, 2015)*

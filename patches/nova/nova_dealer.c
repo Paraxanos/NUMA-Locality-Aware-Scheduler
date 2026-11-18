@@ -2,7 +2,7 @@
 #include "nova_cost.h"
 #include "nova_coordinator.h"
 #include "nova_shadow_index.h"
-#include "../../arch/mir_arch_sim.h"
+#include "mir_arch_sim.h"
 #include <float.h>
 
 uint16_t nova_deal(struct alloc_coordinator_t* coord, struct shadow_index_t* shadow_indices,
