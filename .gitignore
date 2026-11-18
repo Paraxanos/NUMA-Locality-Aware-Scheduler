@@ -9,10 +9,17 @@ Thumbs.db
 
 # Build artifacts
 tilepro64/bin/
+build/
+gem5/
 *.o
 *.so
 *.dylib
 *.a
+
+# Virtual environments
+.venv/
+venv/
+env/
 
 # Python cache
 __pycache__/
