@@ -106,12 +106,15 @@ To resolve the SparseLU paradox, we developed the **NOVA** co-scheduler:
 
 ---
 
-## 3. gem5 / Garnet 3.0 Cycle-Accurate Migration
+## 3. gem5 / Garnet 3.0 Cycle-Accurate Migration (`benchmarks/tilepro64_gem5/`)
 
-For cycle-accurate microarchitectural evaluation, a staged migration path is defined in [`docs/tilepro64_to_gem5_migration_plan.md`](docs/tilepro64_to_gem5_migration_plan.md):
-- **Topology:** Custom 8×8 mesh (`gem5/configs/topologies/TilePro64_Mesh.py`) with 64 Garnet routers, 64 L1/L2 caches, and 4 perimeter memory controllers.
-- **Verification:** Tested with gem5 `v23.0.1.0` (X86_MESI_Two_Level) running 64-core Ruby random tests in Garnet 3.0.
-- **Microbenchmarks:** `calibrate_latency.c` for latency curve fitting, and `bench_gem5.c` with m5ops ROI markers.
+For cycle-accurate microarchitectural evaluation, the staged migration path has been fully implemented and evaluated:
+- **Topology:** Custom 8×8 mesh (`gem5/configs/topologies/TilePro64_Mesh.py` and `benchmarks/tilepro64_gem5/TilePro64_Mesh.py`) with 64 Garnet routers, 64 L1/L2 caches, and 4 perimeter memory controllers.
+- **Verification:** Built and verified with gem5 `v23.0.1.0` (`X86_MESI_Two_Level`) running 16-core mini-mesh and 64-core full-mesh Ruby random tests in Garnet 3.0.
+- **Microbenchmarks & Evaluation Suite (`benchmarks/tilepro64_gem5/`):**
+  - `calibrate_latency.c`: Point-to-point round-trip latency calibration microbenchmark measuring access cycles across Manhattan distances 0 to 14.
+  - `bench_gem5.c`: Multi-threaded benchmark implementing the full 40-configuration production matrix (Map & Vecmul kernels, WS vs. LA, Coarse vs. Fine homing, Vicinity sweeps $d \in \{1, 2, 3, 4, 6, 8, 14\}$, and 25% compute imbalance).
+  - `run_gem5_suite.py`: Automated harness executing the 40-run matrix, saving [results/tilepro64_gem5/matrix.csv](file:///Users/yeschirag/Desktop/college/HPC%20project/results/tilepro64_gem5/matrix.csv) and generating 4-panel publication-grade plots in [results/tilepro64_gem5/tilepro64_gem5_evaluation.png](file:///Users/yeschirag/Desktop/college/HPC%20project/results/tilepro64_gem5/tilepro64_gem5_evaluation.png).
 
 ---
 
@@ -121,12 +124,15 @@ For cycle-accurate microarchitectural evaluation, a staged migration path is def
 # 1. Run NOVA Queue Race and Concurrency Stress Tests
 make -f tests/Makefile test
 
-# 2. Run TILEPro64 analytical simulation validation suite
-cd tilepro64 && make test
+# 2. Run TILEPro64 analytical simulation validation suite & matrix
+cd tilepro64 && make test && make results && cd ..
 
-# 3. Run TILEPro64 experiment matrix and regenerate charts
-make results
+# 3. Regenerate NUMA baseline Figure 7 plot (zero-dependency)
+python3 harness/plot_fig7.py
 
-# 4. View presentation
-open ../docs/presentation.html
+# 4. Run TILEPro64 gem5 evaluation suite and generate comparative charts
+python3 benchmarks/tilepro64_gem5/run_gem5_suite.py
+
+# 5. View presentation
+open docs/presentation.html
 ```
