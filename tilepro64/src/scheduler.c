@@ -19,6 +19,7 @@ void scheduler_reset_costs(void) {
     g_scheduler.total_comm_cost = 0;
     g_scheduler.total_migration_cost = 0;
     g_scheduler.total_migrated_bytes = 0;
+    g_scheduler.total_steal_distance = 0;
     g_scheduler.total_cycles_including_migration = 0;
     g_scheduler.max_tile_cycles = 0;
     memset(g_scheduler.tile_busy_cycles, 0, sizeof(g_scheduler.tile_busy_cycles));
@@ -103,7 +104,8 @@ task_t* scheduler_find_task(uint16_t worker_tile) {
             for (uint16_t v = 0; v < TILEPRO64_NUM_TILES; v++) {
                 if (v != worker_tile && tile_distance(worker_tile, v) == d) {
                     task = queue_steal(tile_get(v)->queue);
-                    if (task) { task->is_stolen = true; g_scheduler.total_tasks_stolen++; return task; }
+                    if (task) { task->is_stolen = true; g_scheduler.total_tasks_stolen++;
+                        g_scheduler.total_steal_distance += tile_distance(worker_tile, v); return task; }
                 }
             }
         }
@@ -111,10 +113,58 @@ task_t* scheduler_find_task(uint16_t worker_tile) {
         for (uint16_t v = 0; v < TILEPRO64_NUM_TILES; v++) {
             uint16_t candidate = (worker_tile + v + 1) % TILEPRO64_NUM_TILES;
             task = queue_steal(tile_get(candidate)->queue);
-            if (task) { task->is_stolen = true; g_scheduler.total_tasks_stolen++; return task; }
+            if (task) { task->is_stolen = true; g_scheduler.total_tasks_stolen++;
+                g_scheduler.total_steal_distance += tile_distance(worker_tile, candidate); return task; }
         }
     }
     return NULL;
+}
+
+task_t* scheduler_find_task_dynamic(uint16_t worker_tile, uint32_t idle_rounds,
+                                    uint32_t remaining_tasks) {
+    tile_t* local = tile_get(worker_tile);
+    if (!local) return NULL;
+    task_t* task = queue_pop_local(local->queue);
+    if (task) { task->is_stolen = false; return task; }
+
+    /* Idle age expands the search frontier from nearby to the full mesh. */
+    uint32_t aged_radius = 1 + idle_rounds * 3;
+    uint16_t radius = (uint16_t)(aged_radius > TILEPRO64_MAX_HOPS ? TILEPRO64_MAX_HOPS : aged_radius);
+    if (radius > TILEPRO64_MAX_HOPS) radius = TILEPRO64_MAX_HOPS;
+    uint32_t phase_remaining = remaining_tasks > TILEPRO64_NUM_TILES ? TILEPRO64_NUM_TILES : remaining_tasks;
+    uint32_t near_completion = TILEPRO64_NUM_TILES - phase_remaining;
+    int best_tile = -1;
+    uint32_t best_index = 0;
+    int64_t best_score = INT64_MIN;
+
+    for (uint16_t source = 0; source < TILEPRO64_NUM_TILES; source++) {
+        uint16_t distance = tile_distance(worker_tile, source);
+        task_queue_t* q = tile_get(source)->queue;
+        if (source == worker_tile || distance > radius || !q || !q->count) continue;
+        uint64_t steal_cost = latency_get(worker_tile, source);
+        for (uint32_t qi = 0; qi < q->count; qi++) {
+            uint32_t index = (q->head + qi) % MAX_QUEUE_CAPACITY;
+            task_t* candidate = q->tasks[index];
+            if (!candidate) continue;
+            uint64_t eta = candidate->compute_cycles + scheduler_calc_comm_cost(&candidate->data_dist, worker_tile);
+            /* Late in the batch, emphasize long remaining tasks on the critical path. */
+            uint64_t phase_factor = TILEPRO64_NUM_TILES + near_completion;
+            int64_t score = (int64_t)((eta * phase_factor) / TILEPRO64_NUM_TILES);
+            score -= (int64_t)steal_cost;
+            /* Aging makes an otherwise marginal distant steal eventually worthwhile. */
+            score += (int64_t)(idle_rounds * (g_latency_model.remote_base / 2));
+            if (score > best_score) { best_score = score; best_tile = source; best_index = qi; }
+        }
+    }
+
+    if (best_tile < 0 || best_score <= 0) return NULL;
+    task = queue_remove_at(tile_get((uint16_t)best_tile)->queue, best_index);
+    if (task) {
+        task->is_stolen = true;
+        g_scheduler.total_tasks_stolen++;
+        g_scheduler.total_steal_distance += tile_distance(worker_tile, (uint16_t)best_tile);
+    }
+    return task;
 }
 
 void scheduler_execute_task(uint16_t worker_tile, task_t* task) {
@@ -138,6 +188,7 @@ const char* scheduler_policy_name(scheduler_policy_t pol) {
         case SCHED_POLICY_WS: return "ws";
         case SCHED_POLICY_LA: return "la";
         case SCHED_POLICY_AM: return "am";
+        case SCHED_POLICY_DP: return "dp";
         default: return "unknown";
     }
 }

@@ -279,6 +279,31 @@ void test_13_h9_link_priority(void) {
                 "Validation 13: H9 priority arbitration reduces queued transfer delay for identical traffic");
 }
 
+// Validation 14: Dynamic stealing picks the task with the longest estimated completion time.
+void test_14_dynamic_steal_uses_remaining_time(void) {
+    tilepro64_init();
+    latency_model_init(10, 38, 2);
+    scheduler_init(SCHED_POLICY_DP, 14);
+    task_t* short_a = task_create(1, 1000);
+    task_t* long_task = task_create(2, 10000);
+    task_t* short_b = task_create(3, 1000);
+    distribute_coarse(&short_a->data_dist, 63, 4096);
+    distribute_coarse(&long_task->data_dist, 63, 4096);
+    distribute_coarse(&short_b->data_dist, 63, 4096);
+    scheduler_deal_task(short_a, 63);
+    scheduler_deal_task(long_task, 63);
+    scheduler_deal_task(short_b, 63);
+
+    task_t* chosen = scheduler_find_task_dynamic(62, 0, 3);
+    bool selected_long = chosen == long_task && chosen->is_stolen && queue_size(tile_get(63)->queue) == 2;
+    TEST_ASSERT(selected_long,
+                "Validation 14: Dynamic steal ranks queued tasks by estimated remaining completion time");
+    task_destroy(short_a);
+    task_destroy(long_task);
+    task_destroy(short_b);
+    tilepro64_cleanup();
+}
+
 int main(void) {
     printf("============================================================\n");
     printf("TILEPro64 Manycore Simulator: Section 21 Validation Suite\n");
@@ -297,9 +322,10 @@ int main(void) {
     test_11_every_task_executes_exactly_once();
     test_12_adaptive_migration_break_even();
     test_13_h9_link_priority();
+    test_14_dynamic_steal_uses_remaining_time();
 
     printf("============================================================\n");
-    printf("Summary: %d Passed, %d Failed (out of 13)\n", g_tests_passed, g_tests_failed);
+    printf("Summary: %d Passed, %d Failed (out of 14)\n", g_tests_passed, g_tests_failed);
     printf("============================================================\n");
 
     return (g_tests_failed == 0) ? 0 : 1;

@@ -87,21 +87,45 @@ static h9_result_t h9_simulate(h9_transfer_t* input, uint32_t count, bool priori
     return result;
 }
 
-benchmark_result_t run_benchmark_h9(const char* policy) {
+static benchmark_result_t run_h9_trace(const char* policy, bool worst_case) {
     h9_transfer_t traffic[H9_TRANSFERS];
     uint32_t n = 0;
-    /* Symmetric all-to-all pressure across the central vertical bisection. */
-    for (uint16_t y = 0; y < 8; y++) for (uint16_t x = 0; x < 4; x++)
-        h9_add_transfer(&traffic[n], n, (uint16_t)(y * 8 + x), (uint16_t)(y * 8 + 7 - x),
-                        4096, (uint32_t)((y * 8 + x) % 8), (uint8_t)(1 + (n % 8))), n++;
-    h9_result_t r = h9_simulate(traffic, n, policy && strcmp(policy, "priority") == 0);
-    return (benchmark_result_t){ .benchmark_name = "h9", .scheduler_name = policy ? policy : "fifo",
+    if (worst_case) {
+        /* All transfers collide on the same seven-hop row-3 route and center link. */
+        for (n = 0; n < 32; n++)
+            h9_add_transfer(&traffic[n], (uint16_t)n, 24, 31, 4096, 0, (uint8_t)(1 + (n % 8)));
+    } else {
+        /* Symmetric pressure across the central vertical bisection. */
+        for (uint16_t y = 0; y < 8; y++) for (uint16_t x = 0; x < 4; x++)
+            h9_add_transfer(&traffic[n], (uint16_t)n, (uint16_t)(y * 8 + x), (uint16_t)(y * 8 + 7 - x),
+                            4096, (uint32_t)((y * 8 + x) % 8), (uint8_t)(1 + (n % 8))), n++;
+    }
+    h9_result_t r;
+    if (policy && strcmp(policy, "simple") == 0) {
+        /* Distance-only baseline: same XY route and serialization per transfer,
+         * but omit shared-link contention and arbitration between transfers. */
+        memset(&r, 0, sizeof(r));
+        for (uint32_t i = 0; i < n; i++) {
+            uint64_t service = (traffic[i].bytes + H9_BW_BYTES_PER_CYCLE - 1) / H9_BW_BYTES_PER_CYCLE;
+            uint64_t finish = traffic[i].release + service * traffic[i].hops;
+            if (finish > r.cycles) r.cycles = finish;
+            for (uint8_t h = 0; h < traffic[i].hops; h++) r.busy[traffic[i].path[h]] += service;
+        }
+        for (uint8_t l = 0; l < H9_LINKS; l++) if (r.busy[l] > r.max_queue) r.max_queue = r.busy[l];
+    } else {
+        r = h9_simulate(traffic, n, policy && strcmp(policy, "priority") == 0);
+    }
+    return (benchmark_result_t){ .benchmark_name = worst_case ? "h9_worst" : "h9",
+        .scheduler_name = policy ? policy : "fifo",
         .dist_name = "center-bisection", .simulated_comm_cost = r.queued_cycles,
         .simulated_migration_cost = 0, .migrated_bytes = 0,
         .simulated_total_work = r.cycles, .simulated_execution_time = r.cycles,
         .congestion_queue_cycles = r.queued_cycles, .max_link_busy_cycles = r.max_queue,
         .task_count = n, .steal_count = 0, .local_exec_count = 0, .remote_exec_count = 0 };
 }
+
+benchmark_result_t run_benchmark_h9(const char* policy) { return run_h9_trace(policy, false); }
+benchmark_result_t run_benchmark_h9_worst(const char* policy) { return run_h9_trace(policy, true); }
 
 #define MAP_NUM_TASKS 64
 #define MAP_VEC_BYTES (64 * 1024)

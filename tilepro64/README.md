@@ -1,5 +1,7 @@
 # TILEPro64 Manycore Locality-Aware Task Scheduler & Architecture Model
 
+See [HOTSPOT_IMPLEMENTATION_SUMMARY.md](HOTSPOT_IMPLEMENTATION_SUMMARY.md) for the current H8/H9/H10a/H10b implementation status, comparisons, reports, and limitations.
+
 A standalone C-based architectural model and locality-aware task scheduling simulator faithfully reproducing the **TILEPro64 manycore processor** portion of the research paper:
 
 > **"Locality-Aware Task Scheduling and Data Distribution for OpenMP Programs on NUMA Systems and Manycore Processors"**  
@@ -67,7 +69,14 @@ The optional `am` scheduler uses locality-aware work placement, then estimates w
 The `map_h8` benchmark is a deliberate static-home stress case: two 32 KB chunks begin on far-side homes and are repeatedly read by tile 0. It compares static homes against AM migration over the same 64 accesses. Standard `map` and `vecmul` retain their original access patterns and are reported separately.
 
 ### 5.4 Center-bisection congestion (H9)
-Run `tilepro64 --benchmark h9 --scheduler fifo` or `--scheduler priority` to replay the same 32-transfer cross-mesh trace. The model uses deterministic XY routes, 64 bytes/cycle per directed link, 4 KB transfers, and per-link arbitration; priority orders by synthetic task criticality. It reports aggregate queued transfer cycles, busiest-link service cycles, and network makespan. On the checked trace, priority reduces aggregate queue wait from 1,528 to 48 cycles, while makespan shifts from 448 to 451 cycles. This shows the priority policy redistributes delay; it does not create capacity or improve this trace's overall completion time. Link bandwidth and traffic priorities are explicit simulator assumptions, not measured TILEPro64 values.
+Run `tilepro64 --benchmark h9 --scheduler simple`, `fifo`, or `priority` to replay the same 32-transfer cross-mesh trace. Simple uses deterministic XY paths and per-transfer service time but omits shared-link contention; FIFO and priority model per-link arbitration. All policies assume 64 bytes/cycle per link and 4 KB transfers. Priority orders by synthetic task criticality. On this trace, queue wait is 0 for simple, 1,528 cycles for FIFO, and 48 for priority; makespans are 448, 448, and 451 cycles respectively. The simple result is a no-contention baseline, not a realistic simultaneous-traffic prediction. Link bandwidth and priorities are simulator assumptions, not measured TILEPro64 values. The model treats each link as an undirected shared resource and does not model full-duplex directions.
+
+See [H9_Comparison_Report.md](H9_Comparison_Report.md) for the detailed comparison, metric definitions, and assumptions.
+
+For simultaneous transfers forced onto one route, see [H9_Worst_Case_Report.md](H9_Worst_Case_Report.md) and [the worst-case comparison graph](results/h9_worst_comparison.png).
+
+### 5.5 Dynamic stealing for corner drag (H10b)
+The `dp` policy estimates each task's remaining time from compute cycles plus its data-access cost. Idle workers increase their search radius over unsuccessful rounds and rank eligible tasks using estimated completion time, steal cost, remaining batch size, and idle age. The `h10b` benchmark compares dynamic priority with unrestricted WS and fixed two-hop LA on a corner-homed task batch. See [H10b_Dynamic_Stealing_Report.md](H10b_Dynamic_Stealing_Report.md) and [the comparison graph](results/h10b_comparison.png) for results and assumptions.
 
 ---
 

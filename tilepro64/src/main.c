@@ -4,11 +4,11 @@
 #include <string.h>
 
 static void print_csv_header(void) {
-    printf("benchmark,scheduler,data_distribution,vicinity,simulated_communication_cost,simulated_migration_cost,migrated_bytes,simulated_total_work,simulated_execution_time,congestion_queue_cycles,max_link_busy_cycles,task_count,steal_count,local_execution_count,remote_execution_count\n");
+    printf("benchmark,scheduler,data_distribution,vicinity,simulated_communication_cost,simulated_migration_cost,migrated_bytes,simulated_total_work,simulated_execution_time,congestion_queue_cycles,max_link_busy_cycles,idle_probe_rounds,total_steal_distance,task_count,steal_count,local_execution_count,remote_execution_count\n");
 }
 
 static void print_csv_row(const benchmark_result_t* r) {
-    printf("%s,%s,%s,%u,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%u,%u,%u,%u\n",
+    printf("%s,%s,%s,%u,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%u,%u,%u,%u\n",
            r->benchmark_name,
            r->scheduler_name,
            r->dist_name,
@@ -20,6 +20,8 @@ static void print_csv_row(const benchmark_result_t* r) {
            (unsigned long long)r->simulated_execution_time,
            (unsigned long long)r->congestion_queue_cycles,
            (unsigned long long)r->max_link_busy_cycles,
+           (unsigned long long)r->idle_probe_rounds,
+           (unsigned long long)r->total_steal_distance,
            r->task_count,
            r->steal_count,
            r->local_exec_count,
@@ -30,8 +32,8 @@ static void print_usage(const char* prog) {
     printf("TILEPro64 Manycore Locality-Aware Scheduler Simulator\n");
     printf("Usage: %s [options]\n", prog);
     printf("Options:\n");
-    printf("  --benchmark <map|map_h8|vecmul|h9> Benchmark to run (default: map)\n");
-    printf("  --scheduler <ws|la|am>      For h9: fifo, priority, or fair (default: fifo)\n");
+    printf("  --benchmark <map|map_h8|vecmul|h9|h9_worst|h10b> Benchmark to run (default: map)\n");
+    printf("  --scheduler <ws|la|am|dp>   Scheduler policy; h9 accepts simple, fifo, priority\n");
     printf("  --dist <coarse|fine>        Data distribution policy (default: coarse)\n");
     printf("  --vicinity <1..14>          Vicinity search radius in hops (default: 4)\n");
     printf("  --csv                       Print output in CSV format\n");
@@ -98,8 +100,22 @@ int main(int argc, char* argv[]) {
         }
         benchmark_result_t h9_fifo = run_benchmark_h9("fifo");
         benchmark_result_t h9_priority = run_benchmark_h9("priority");
+        benchmark_result_t h9_simple = run_benchmark_h9("simple");
+        print_csv_row(&h9_simple);
         print_csv_row(&h9_fifo);
         print_csv_row(&h9_priority);
+        benchmark_result_t worst_simple = run_benchmark_h9_worst("simple");
+        benchmark_result_t worst_fifo = run_benchmark_h9_worst("fifo");
+        benchmark_result_t worst_priority = run_benchmark_h9_worst("priority");
+        print_csv_row(&worst_simple);
+        print_csv_row(&worst_fifo);
+        print_csv_row(&worst_priority);
+        benchmark_result_t h10b_ws = run_benchmark_h10b("ws", 14);
+        benchmark_result_t h10b_la = run_benchmark_h10b("la", 2);
+        benchmark_result_t h10b_dp = run_benchmark_h10b("dp", 14);
+        print_csv_row(&h10b_ws);
+        print_csv_row(&h10b_la);
+        print_csv_row(&h10b_dp);
         return 0;
     }
 
@@ -114,6 +130,14 @@ int main(int argc, char* argv[]) {
         const char* p = "fifo";
         for (int i = 1; i + 1 < argc; i++) if (strcmp(argv[i], "--scheduler") == 0) p = argv[i + 1];
         res = run_benchmark_h9(p);
+    } else if (strcmp(bench_str, "h9_worst") == 0) {
+        const char* p = "fifo";
+        for (int i = 1; i + 1 < argc; i++) if (strcmp(argv[i], "--scheduler") == 0) p = argv[i + 1];
+        res = run_benchmark_h9_worst(p);
+    } else if (strcmp(bench_str, "h10b") == 0) {
+        const char* p = "dp";
+        for (int i = 1; i + 1 < argc; i++) if (strcmp(argv[i], "--scheduler") == 0) p = argv[i + 1];
+        res = run_benchmark_h10b(p, vicinity);
     } else {
         fprintf(stderr, "Unknown benchmark: %s\n", bench_str);
         return 1;

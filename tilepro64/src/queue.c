@@ -41,6 +41,20 @@ struct task_t* queue_steal(task_queue_t* q) {
     return task;
 }
 
+struct task_t* queue_remove_at(task_queue_t* q, uint32_t logical_index) {
+    if (!q || logical_index >= q->count) return NULL;
+    uint32_t index = (q->head + logical_index) % MAX_QUEUE_CAPACITY;
+    struct task_t* task = q->tasks[index];
+    for (uint32_t i = logical_index; i + 1 < q->count; i++) {
+        uint32_t dst = (q->head + i) % MAX_QUEUE_CAPACITY;
+        uint32_t src = (q->head + i + 1) % MAX_QUEUE_CAPACITY;
+        q->tasks[dst] = q->tasks[src];
+    }
+    q->tail = (q->tail + MAX_QUEUE_CAPACITY - 1) % MAX_QUEUE_CAPACITY;
+    q->count--;
+    return task;
+}
+
 uint32_t queue_size(const task_queue_t* q) {
     return q ? q->count : 0;
 }

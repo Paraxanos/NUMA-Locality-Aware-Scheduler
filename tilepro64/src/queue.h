@@ -21,6 +21,7 @@ void queue_destroy(task_queue_t* q);
 bool queue_push(task_queue_t* q, struct task_t* task);
 struct task_t* queue_pop_local(task_queue_t* q);
 struct task_t* queue_steal(task_queue_t* q);
+struct task_t* queue_remove_at(task_queue_t* q, uint32_t logical_index);
 uint32_t queue_size(const task_queue_t* q);
 
 #endif // QUEUE_H

@@ -17,6 +17,8 @@ typedef struct {
     uint64_t simulated_execution_time;
     uint64_t congestion_queue_cycles;
     uint64_t max_link_busy_cycles;
+    uint64_t idle_probe_rounds;
+    uint64_t total_steal_distance;
     uint32_t task_count;
     uint32_t steal_count;
     uint32_t local_exec_count;
@@ -26,6 +28,8 @@ typedef struct {
 benchmark_result_t run_benchmark_map(scheduler_policy_t sched, data_dist_policy_t dist, uint16_t vicinity);
 benchmark_result_t run_benchmark_map_h8(scheduler_policy_t sched, data_dist_policy_t dist, uint16_t vicinity);
 benchmark_result_t run_benchmark_h9(const char* policy);
+benchmark_result_t run_benchmark_h9_worst(const char* policy);
+benchmark_result_t run_benchmark_h10b(const char* policy, uint16_t vicinity);
 benchmark_result_t run_benchmark_vecmul(scheduler_policy_t sched, data_dist_policy_t dist, uint16_t vicinity);
 
 #endif // BENCHMARK_H
