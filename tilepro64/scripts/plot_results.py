@@ -21,19 +21,21 @@ def main():
         return 1
 
     rows = []
-    with open(RAW_CSV, "r") as f:
+    with open(RAW_CSV, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for r in reader:
             rows.append(r)
 
     # Filter representative comparison for default vicinity = 4
-    # Configurations: WS+Coarse, WS+Fine, LA+Coarse, LA+Fine
-    benchmarks = ["map", "vecmul"]
+    # Compare existing policies and adaptive migration at vicinity 4.
+    benchmarks = ["map", "map_h8", "vecmul"]
     configs = [
         ("WS + Coarse", "ws", "coarse"),
         ("WS + Fine",   "ws", "fine"),
         ("LA + Coarse", "la", "coarse"),
         ("LA + Fine",   "la", "fine"),
+        ("AM + Coarse", "am", "coarse"),
+        ("AM + Fine",   "am", "fine"),
     ]
 
     comm_data = {b: [] for b in benchmarks}
@@ -55,11 +57,11 @@ def main():
     # Plot 2-panel chart as specified in Section 30 of prompt.md
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5))
     x = range(len(benchmarks))
-    bar_width = 0.18
-    colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2"]
+    bar_width = 0.13
+    colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2", "#CCB974", "#64B5CD"]
 
     for i, (label, _, _) in enumerate(configs):
-        offset = (i - 1.5) * bar_width
+        offset = (i - 2.5) * bar_width
         vals_comm = [comm_data[b][i] / 1e6 for b in benchmarks] # Mega-cycles
         vals_time = [time_data[b][i] / 1e3 for b in benchmarks] # Kilo-cycles
 
@@ -70,7 +72,7 @@ def main():
     ax1.set_title("Modeled Communication / Access Cost\n(Lower is Better)", fontsize=12, fontweight="bold")
     ax1.set_ylabel("Communication Cost (Million Cycles)", fontsize=11)
     ax1.set_xticks(x)
-    ax1.set_xticklabels(["Map (48-64 Tasks)", "Vecmul (Overlapping Tiles)"], fontsize=11)
+    ax1.set_xticklabels(["Map", "Map H8 stress", "Vecmul"], fontsize=11)
     ax1.grid(axis="y", linestyle="--", alpha=0.6)
     ax1.legend(title="Configuration", fontsize=9, loc="upper right")
 
@@ -78,7 +80,7 @@ def main():
     ax2.set_title("Simulated Execution Time (Makespan)\n(Lower is Better)", fontsize=12, fontweight="bold")
     ax2.set_ylabel("Simulated Execution Time (Thousand Cycles)", fontsize=11)
     ax2.set_xticks(x)
-    ax2.set_xticklabels(["Map (48-64 Tasks)", "Vecmul (Overlapping Tiles)"], fontsize=11)
+    ax2.set_xticklabels(["Map", "Map H8 stress", "Vecmul"], fontsize=11)
     ax2.grid(axis="y", linestyle="--", alpha=0.6)
     ax2.legend(title="Configuration", fontsize=9, loc="upper right")
 

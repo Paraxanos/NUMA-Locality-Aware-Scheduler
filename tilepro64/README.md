@@ -61,6 +61,14 @@ When a worker's local queue is empty:
 3. Queues beyond the configured vicinity are excluded from search.
 4. **Baseline Work-Stealing (WS):** Unrestricted search across all 63 remote tiles without distance filtering.
 
+### 5.3 Adaptive Migration (AM, simulator experiment)
+The optional `am` scheduler uses locality-aware work placement, then estimates whether changing a task footprint's home to the executing tile will pay off over its expected remaining uses. Migration cost depends on footprint size and mesh distance; a move occurs only when expected access savings exceed that cost and the complete footprint fits in the destination's 64 KB L2 bank. Migration bytes and cycles are reported separately, and migration cycles contribute to simulated makespan. The reuse count is a benchmark assumption, so this is a simulator policy experiment, not evidence of physical TILEPro64 cache-line migration support.
+
+The `map_h8` benchmark is a deliberate static-home stress case: two 32 KB chunks begin on far-side homes and are repeatedly read by tile 0. It compares static homes against AM migration over the same 64 accesses. Standard `map` and `vecmul` retain their original access patterns and are reported separately.
+
+### 5.4 Center-bisection congestion (H9)
+Run `tilepro64 --benchmark h9 --scheduler fifo` or `--scheduler priority` to replay the same 32-transfer cross-mesh trace. The model uses deterministic XY routes, 64 bytes/cycle per directed link, 4 KB transfers, and per-link arbitration; priority orders by synthetic task criticality. It reports aggregate queued transfer cycles, busiest-link service cycles, and network makespan. On the checked trace, priority reduces aggregate queue wait from 1,528 to 48 cycles, while makespan shifts from 448 to 451 cycles. This shows the priority policy redistributes delay; it does not create capacity or improve this trace's overall completion time. Link bandwidth and traffic priorities are explicit simulator assumptions, not measured TILEPro64 values.
+
 ---
 
 ## 6. Build & Test Instructions
@@ -86,7 +94,7 @@ make results
 ```
 This automated workflow:
 1. Runs the full experiment matrix across **Map** and **Vecmul**, comparing **WS** vs **LA**, **Coarse** vs **Fine**, and vicinity radii $d \in [1, 14]$.
-2. Emits raw data to `results/raw_results.csv`.
+2. Emits raw data to `results/raw_results.csv`, including migration overhead for AM rows.
 3. Programmatically generates the grouped-bar chart `results/tilepro64_results.png`.
 
 ---

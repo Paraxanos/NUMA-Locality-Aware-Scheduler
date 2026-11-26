@@ -9,11 +9,11 @@ TEST_SRC = tests/test_suite.c
 all: bin/tilepro64 bin/test_suite
 
 bin/tilepro64: $(SRC) $(MAIN_SRC)
-	@mkdir -p bin
+	@python -c "from pathlib import Path; Path('bin').mkdir(exist_ok=True)"
 	$(CC) $(CFLAGS) $(SRC) $(MAIN_SRC) -o bin/tilepro64
 
 bin/test_suite: $(SRC) $(TEST_SRC)
-	@mkdir -p bin
+	@python -c "from pathlib import Path; Path('bin').mkdir(exist_ok=True)"
 	$(CC) $(CFLAGS) $(SRC) $(TEST_SRC) -o bin/test_suite
 
 test: bin/test_suite

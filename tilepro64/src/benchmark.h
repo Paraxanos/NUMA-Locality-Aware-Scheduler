@@ -11,7 +11,12 @@ typedef struct {
     const char* dist_name;
     uint16_t vicinity;
     uint64_t simulated_comm_cost;
+    uint64_t simulated_migration_cost;
+    uint64_t migrated_bytes;
+    uint64_t simulated_total_work;
     uint64_t simulated_execution_time;
+    uint64_t congestion_queue_cycles;
+    uint64_t max_link_busy_cycles;
     uint32_t task_count;
     uint32_t steal_count;
     uint32_t local_exec_count;
@@ -19,6 +24,8 @@ typedef struct {
 } benchmark_result_t;
 
 benchmark_result_t run_benchmark_map(scheduler_policy_t sched, data_dist_policy_t dist, uint16_t vicinity);
+benchmark_result_t run_benchmark_map_h8(scheduler_policy_t sched, data_dist_policy_t dist, uint16_t vicinity);
+benchmark_result_t run_benchmark_h9(const char* policy);
 benchmark_result_t run_benchmark_vecmul(scheduler_policy_t sched, data_dist_policy_t dist, uint16_t vicinity);
 
 #endif // BENCHMARK_H
