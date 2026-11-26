@@ -5,6 +5,7 @@
 #include "../src/task.h"
 #include "../src/queue.h"
 #include "../src/scheduler.h"
+#include "../src/benchmark.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -241,6 +242,43 @@ void test_11_every_task_executes_exactly_once(void) {
     tilepro64_cleanup();
 }
 
+// Validation 12: Adaptive placement migrates only when future savings repay it.
+void test_12_adaptive_migration_break_even(void) {
+    tilepro64_init();
+    latency_model_init(10, 38, 2);
+    scheduler_init(SCHED_POLICY_AM, 4);
+
+    data_dist_t dist;
+    data_dist_init(&dist);
+    data_dist_add(&dist, 0, 4096);
+    data_dist_add(&dist, 8, 4096);
+    uint64_t before = scheduler_calc_comm_cost(&dist, 0);
+    uint64_t low_reuse_move = scheduler_adapt_data_placement(&dist, 0, 1, 1);
+    bool rejected = (low_reuse_move == 0 && dist.bytes_per_tile[8] == 4096);
+
+    uint64_t high_reuse_move = scheduler_adapt_data_placement(&dist, 0, 1, 100);
+    uint64_t after = scheduler_calc_comm_cost(&dist, 0);
+    bool moved = (high_reuse_move > 0 && dist.bytes_per_tile[8] == 0 &&
+                  dist.bytes_per_tile[0] == 8192 && after < before &&
+                  g_scheduler.total_migration_cost == high_reuse_move &&
+                  g_scheduler.total_migrated_bytes == 4096);
+
+    TEST_ASSERT(rejected && moved,
+                "Validation 12: Adaptive migration rejects poor reuse and moves data when estimated savings exceed cost");
+    tilepro64_cleanup();
+}
+
+// Validation 13: H9 policies arbitrate identical link traffic.
+void test_13_h9_link_priority(void) {
+    benchmark_result_t fifo = run_benchmark_h9("fifo");
+    benchmark_result_t priority = run_benchmark_h9("priority");
+    bool same_work = fifo.task_count == priority.task_count &&
+                     fifo.max_link_busy_cycles == priority.max_link_busy_cycles;
+    bool lower_queue_delay = priority.congestion_queue_cycles < fifo.congestion_queue_cycles;
+    TEST_ASSERT(same_work && lower_queue_delay,
+                "Validation 13: H9 priority arbitration reduces queued transfer delay for identical traffic");
+}
+
 int main(void) {
     printf("============================================================\n");
     printf("TILEPro64 Manycore Simulator: Section 21 Validation Suite\n");
@@ -257,9 +295,11 @@ int main(void) {
     test_9_vicinity_bounded_stealing();
     test_10_task_dependencies_respected();
     test_11_every_task_executes_exactly_once();
+    test_12_adaptive_migration_break_even();
+    test_13_h9_link_priority();
 
     printf("============================================================\n");
-    printf("Summary: %d Passed, %d Failed (out of 11)\n", g_tests_passed, g_tests_failed);
+    printf("Summary: %d Passed, %d Failed (out of 13)\n", g_tests_passed, g_tests_failed);
     printf("============================================================\n");
 
     return (g_tests_failed == 0) ? 0 : 1;

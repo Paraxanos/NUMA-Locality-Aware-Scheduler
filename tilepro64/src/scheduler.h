@@ -9,7 +9,8 @@
 
 typedef enum {
     SCHED_POLICY_WS, // Baseline Work-Stealing
-    SCHED_POLICY_LA  // Locality-Aware Work Dealing & Stealing
+    SCHED_POLICY_LA, // Locality-Aware Work Dealing & Stealing
+    SCHED_POLICY_AM  // Adaptive cache migration plus locality-aware scheduling
 } scheduler_policy_t;
 
 typedef struct {
@@ -24,6 +25,9 @@ typedef struct {
     uint64_t local_executions;
     uint64_t remote_executions;
     uint64_t total_comm_cost;
+    uint64_t total_migration_cost;
+    uint64_t total_migrated_bytes;
+    uint64_t total_cycles_including_migration;
     uint64_t max_tile_cycles;     // Critical path makespan (simulated execution time)
     uint64_t tile_busy_cycles[TILEPRO64_NUM_TILES];
 } scheduler_t;
@@ -31,6 +35,10 @@ typedef struct {
 extern scheduler_t g_scheduler;
 
 void scheduler_init(scheduler_policy_t policy, uint16_t vicinity);
+uint64_t scheduler_adapt_data_placement(data_dist_t* dist, uint16_t access_tile,
+                                        uint32_t accesses_per_byte, uint32_t remaining_uses);
+void scheduler_reset_costs(void);
+void scheduler_charge_migration(uint64_t bytes, uint16_t from_tile, uint16_t to_tile);
 uint64_t scheduler_calc_comm_cost(const data_dist_t* dist, uint16_t target_tile);
 uint16_t scheduler_deal_task(task_t* task, uint16_t creator_tile);
 task_t* scheduler_find_task(uint16_t worker_tile);

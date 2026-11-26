@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-BIN = REPO_ROOT / "bin" / "tilepro64"
+BIN = REPO_ROOT / "bin" / ("tilepro64.exe" if sys.platform == "win32" else "tilepro64")
 RESULTS_DIR = REPO_ROOT / "results"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 RAW_CSV = RESULTS_DIR / "raw_results.csv"
