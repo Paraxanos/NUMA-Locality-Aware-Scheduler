@@ -1,0 +1,76 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+
+# SCons
+.sconsign.dblite
+
+# Build directories
+debug-build
+opt-build
+prof-build
+check-build
+
+# MIR temps
+mir_arch_this.c
+topology_this
+HAVE_LIBNUMA
+HAVE_PAPI
+mir_public_int.h
+mir-task-stats
+mir-worker-stats
+
+# Misc
+*.BACK
+*.BAK
+*.pyc
+*.swp
+obj-intel64
+*.log
+sync-with-PaPP-SVN.sh
+*.orig
+test*-result.txt
+
+# R temps
+.Rhistory
+.Rdata
+
+# Tagging
+tags
+TAGS
+build_cscope_db.sh
+cscope.files
+
+# Tex
+*.aux
+*.fdb_latexmk
+*.fls

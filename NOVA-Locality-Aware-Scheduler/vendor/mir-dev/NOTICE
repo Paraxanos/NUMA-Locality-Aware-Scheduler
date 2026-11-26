@@ -1,0 +1,23 @@
+MIR task-based runtime system
+Copyright 2012-2017 Ananya Muddukrishna
+
+The MIR task-based runtime system is academic software developed by Ananya Muddukrishna.
+MIR development began during Ananya's PhD studies at KTH Royal Institute of Technology.
+
+# Inclusions
+
+This software includes:
+
+- Code derived from the Glasgow Haskell Compiler.
+
+- Code part of redistributable sources of Intel Pin.
+
+# Citation
+
+If you use MIR in your work, please cite it one or more of its basis publications:
+
+[1] Muddukrishna, Ananya, P. A. Jonsson, A. Podobas, and M. Brorsson, “Grain Graphs: OpenMP Performance Analysis Made Easy,” in Proceedings of the 21st ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming, New York, NY, USA, 2016, p. 28:1–28:13.
+
+[2] Muddukrishna, Ananya, P. A. Jonsson, and M. Brorsson, “Characterizing task-based OpenMP programs,” PLoS ONE, vol. 10, 04 2015.
+
+[3] Muddukrishna, Ananya, P. A. Jonsson, and M. Brorsson, “Locality-aware task scheduling and data distribution for OpenMP programs on NUMA systems and manycore processors,” Scientific Programming, no. 981759, 2015.
