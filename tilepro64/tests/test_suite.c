@@ -304,6 +304,17 @@ void test_14_dynamic_steal_uses_remaining_time(void) {
     tilepro64_cleanup();
 }
 
+// Validation 15: H10a 2D-blocked stencil placement cuts remote access cost & bisection traffic vs 1D-striped.
+void test_15_h10a_2d_blocked_stencil(void) {
+    benchmark_result_t striped = run_benchmark_h10a(SCHED_POLICY_LA, DATA_DIST_1D_STRIPED, 4);
+    benchmark_result_t blocked = run_benchmark_h10a(SCHED_POLICY_LA, DATA_DIST_2D_BLOCK, 4);
+    bool lower_comm = blocked.simulated_comm_cost < striped.simulated_comm_cost;
+    bool lower_bisection = blocked.congestion_queue_cycles < striped.congestion_queue_cycles;
+    bool faster_makespan = blocked.simulated_execution_time < striped.simulated_execution_time;
+    TEST_ASSERT(lower_comm && lower_bisection && faster_makespan,
+                "Validation 15: H10a 2D-blocked stencil preserves neighbor locality and slashes center-bisection traffic vs 1D striping");
+}
+
 int main(void) {
     printf("============================================================\n");
     printf("TILEPro64 Manycore Simulator: Section 21 Validation Suite\n");
@@ -323,9 +334,10 @@ int main(void) {
     test_12_adaptive_migration_break_even();
     test_13_h9_link_priority();
     test_14_dynamic_steal_uses_remaining_time();
+    test_15_h10a_2d_blocked_stencil();
 
     printf("============================================================\n");
-    printf("Summary: %d Passed, %d Failed (out of 14)\n", g_tests_passed, g_tests_failed);
+    printf("Summary: %d Passed, %d Failed (out of 15)\n", g_tests_passed, g_tests_failed);
     printf("============================================================\n");
 
     return (g_tests_failed == 0) ? 0 : 1;

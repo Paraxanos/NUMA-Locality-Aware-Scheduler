@@ -30,6 +30,7 @@ benchmark_result_t run_benchmark_map_h8(scheduler_policy_t sched, data_dist_poli
 benchmark_result_t run_benchmark_h9(const char* policy);
 benchmark_result_t run_benchmark_h9_worst(const char* policy);
 benchmark_result_t run_benchmark_h10b(const char* policy, uint16_t vicinity);
+benchmark_result_t run_benchmark_h10a(scheduler_policy_t sched, data_dist_policy_t dist, uint16_t vicinity);
 benchmark_result_t run_benchmark_vecmul(scheduler_policy_t sched, data_dist_policy_t dist, uint16_t vicinity);
 
 #endif // BENCHMARK_H

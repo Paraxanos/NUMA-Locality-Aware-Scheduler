@@ -1,4 +1,4 @@
-﻿benchmark,scheduler,data_distribution,vicinity,simulated_communication_cost,simulated_migration_cost,migrated_bytes,simulated_total_work,simulated_execution_time,congestion_queue_cycles,max_link_busy_cycles,idle_probe_rounds,total_steal_distance,task_count,steal_count,local_execution_count,remote_execution_count
+benchmark,scheduler,data_distribution,vicinity,simulated_communication_cost,simulated_migration_cost,migrated_bytes,simulated_total_work,simulated_execution_time,congestion_queue_cycles,max_link_busy_cycles,idle_probe_rounds,total_steal_distance,task_count,steal_count,local_execution_count,remote_execution_count
 map,ws,coarse,1,1687552,0,0,11287552,183792,0,0,0,0,64,63,1,63
 map,ws,coarse,2,1687552,0,0,11287552,183792,0,0,0,0,64,63,1,63
 map,ws,coarse,3,1687552,0,0,11287552,183792,0,0,0,0,64,63,1,63
@@ -120,3 +120,7 @@ h9_worst,priority,center-bisection,0,31744,0,0,2432,2432,31744,2048,0,0,32,0,0,0
 h10b,ws,corner-home-63,14,211200,0,0,731200,33328,0,0,0,448,64,63,1,63
 h10b,la,corner-home-63,2,148864,0,0,668864,133160,0,0,638,87,64,54,10,54
 h10b,dp,corner-home-63,14,194048,0,0,714048,47680,0,0,175,342,64,61,3,61
+h10a,ws,1d_striped,4,25198592,0,0,46202880,775168,524288,32768,0,1792,256,252,4,252
+h10a,ws,2d_block,4,26767360,0,0,48134144,905728,886784,63488,0,1792,256,252,4,252
+h10a,la,1d_striped,4,24743936,0,0,45748224,1492992,524288,49152,0,724,256,248,8,248
+h10a,la,2d_block,4,12124160,0,0,32636928,526848,32768,2048,0,0,256,0,256,0

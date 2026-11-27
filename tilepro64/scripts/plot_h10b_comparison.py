@@ -27,38 +27,40 @@ def main():
         ("simulated_execution_time", "Makespan", "Modeled cycles"),
         ("idle_probe_rounds", "Idle search probes", "Tile-probes"),
     ]
-    fig, axes = plt.subplots(2, 2, figsize=(11, 7))
+    fig, axes = plt.subplots(1, 4, figsize=(14.0, 4.7))
     axes = list(axes.flat)
     for ax, (field, title, ylabel) in zip(axes[:3], metrics):
         values = [int(data[p][field]) for p in policies]
-        bars = ax.bar(labels, values, color=colors, edgecolor="#222222", linewidth=0.7, width=0.66)
-        ax.set_title(title, fontweight="bold")
-        ax.set_ylabel(ylabel)
+        bars = ax.bar(labels, values, color=colors, edgecolor="#222222", linewidth=0.8, width=0.64)
+        ax.set_title(title, fontweight="bold", fontsize=13)
+        ax.set_ylabel(ylabel, fontsize=11)
+        ax.tick_params(axis="both", labelsize=10.5)
         ax.grid(axis="y", linestyle="--", alpha=0.45)
         ax.set_axisbelow(True)
-        ax.set_ylim(0, max(values) * 1.2 if max(values) else 1)
+        ax.set_ylim(0, max(values) * 1.24 if max(values) else 1)
         for bar, value in zip(bars, values):
             ax.annotate(f"{value:,}", (bar.get_x() + bar.get_width() / 2, bar.get_height()),
-                        xytext=(0, 4), textcoords="offset points", ha="center", va="bottom", fontsize=9)
+                        xytext=(0, 4), textcoords="offset points", ha="center", va="bottom", fontsize=10.5, fontweight="bold")
 
     ax = axes[3]
     avg_hops = [int(data[p]["total_steal_distance"]) / max(1, int(data[p]["steal_count"])) for p in policies]
-    bars = ax.bar(labels, avg_hops, color=colors, edgecolor="#222222", linewidth=0.7, width=0.66)
-    ax.set_title("Average steal distance", fontweight="bold")
-    ax.set_ylabel("Mesh hops per steal")
+    bars = ax.bar(labels, avg_hops, color=colors, edgecolor="#222222", linewidth=0.8, width=0.64)
+    ax.set_title("Average steal distance", fontweight="bold", fontsize=13)
+    ax.set_ylabel("Mesh hops per steal", fontsize=11)
+    ax.tick_params(axis="both", labelsize=10.5)
     ax.grid(axis="y", linestyle="--", alpha=0.45)
     ax.set_axisbelow(True)
-    ax.set_ylim(0, max(avg_hops) * 1.2)
+    ax.set_ylim(0, max(avg_hops) * 1.24)
     for bar, value in zip(bars, avg_hops):
         ax.annotate(f"{value:.2f}", (bar.get_x() + bar.get_width() / 2, bar.get_height()),
-                    xytext=(0, 4), textcoords="offset points", ha="center", va="bottom", fontsize=9)
+                    xytext=(0, 4), textcoords="offset points", ha="center", va="bottom", fontsize=10.5, fontweight="bold")
 
-    fig.suptitle("H10b: Corner-Home Work-Stealing Policies", fontsize=15, fontweight="bold")
+    fig.suptitle("H10b: Corner-Home Work-Stealing Policies", fontsize=16, fontweight="bold")
     fig.text(0.5, 0.015,
              "64 tasks; 4 KB per task homed at tile 63; mixed estimated compute times. "
              "Dynamic priority ages idle workers and expands search radius.",
-             ha="center", fontsize=9)
-    fig.tight_layout(rect=(0, 0.06, 1, 0.94))
+             ha="center", fontsize=10.5)
+    fig.tight_layout(rect=(0, 0.08, 1, 0.90))
     fig.savefig(OUT_PATH, dpi=180, bbox_inches="tight")
     print(f"Saved H10b comparison graph: {OUT_PATH}")
 

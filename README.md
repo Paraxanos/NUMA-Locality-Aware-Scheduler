@@ -1,12 +1,13 @@
 # Locality-Aware Task Scheduling on Heterogeneous HPC Architectures
 
-[![Build Status](https://img.shields.io/badge/tests-11%2F11%20passing-brightgreen)](#)
+[![Build Status](https://img.shields.io/badge/tests-15%2F15%20passing-brightgreen)](#)
+[![MIR Probe](https://img.shields.io/badge/MIR%20probe-400%2F400%20shuffled-brightgreen)](#)
 [![Architectures](https://img.shields.io/badge/architectures-NUMA%20%7C%20TILEPro64-blue)](#)
 [![Paper](https://img.shields.io/badge/reference-Scientific%20Programming%202015-orange)](https://doi.org/10.1155/2015/981759)
 
 A comprehensive high-performance computing (HPC) research codebase implementing and evaluating locality-aware task scheduling and data distribution across two distinct architectural paradigms:
-1. **Multi-Socket NUMA Systems (AMD Opteron 8-Node Topology)** + The **NOVA / ALLoC** Co-Scheduler.
-2. **2D Mesh Manycore Processors (Tilera TILEPro64 8×8 Mesh)** + The **TILEPro64 Locality Simulator**.
+1. **Multi-Socket NUMA Systems (`NOVA-Locality-Aware-Scheduler/` + `results/numa/`)** — **NOVA / ALLoC** Co-Scheduler on MIR HAL-Sim (AMD Opteron 8-Node Topology).
+2. **2D Mesh Manycore Processors (`tilepro64/`)** — Analytical 64-tile 8×8 Mesh Simulator resolving hotspots **H8, H9, H10a, and H10b**.
 
 Based on the research paper:
 > **"Locality-Aware Task Scheduling and Data Distribution for OpenMP Programs on NUMA Systems and Manycore Processors"**  
@@ -62,30 +63,32 @@ We reproduced the paper's Figure 7 across 5 computational kernels (Map, Matmul, 
 - **The SparseLU Paradox:** While modeled communication cost drops **26.7%** (0.733×), real execution time is **15.1% SLOWER** (1.151× cycles) under locality-aware scheduling compared to simple work-stealing!
   - *Root Cause:* In irregular task DAGs, locality-only dealing funnels tasks onto an already overloaded queue, leaving other cores idle.
 
-### The NOVA / ALLoC Solution (`patches/nova/`)
-To resolve the SparseLU paradox, we developed the **NOVA** co-scheduler:
-- **N-A (Load-Aware Dealing):** Continuous composite score $\mathrm{score}(q) = \alpha \cdot \mathrm{comm}_{\mathrm{norm}} + (1 - \alpha) \cdot \mathrm{occ}_{\mathrm{norm}}$ balancing data proximity with queue backlog.
-- **N-B (Task-Level Locality Stealing):** Lock-free Shadow Index ring buffer ($k=8$) allowing thieves to peek at waiting tasks and steal those matching their local memory.
-- **N-C (Adaptive Steal Radius):** Per-worker EWMA dynamically adjusts search reach to prevent starvation without flooding buses.
-- **Zero Lock Contention:** Double-buffered control plane coordinator swaps statistics snapshots every 64 ops.
+### The NOVA / ALLoC Solution (`NOVA-Locality-Aware-Scheduler/` & `patches/nova/`)
+To resolve H1–H4 and MIR defects D1–D3 (including the SparseLU imbalance), we implemented the **NOVA** co-scheduler (`nova-a`, `nova-ab`, `nova`) inside MIR using a Control/Data Plane split:
+- **N-A (Load-Aware Dealing):** Composite score $\mathrm{score}(q) = \alpha \cdot \mathrm{comm}_{\mathrm{norm}} + (1 - \alpha) \cdot \mathrm{occ}_{\mathrm{norm}}$ balancing proximity with queue backlog (rebalancing SparseLU Node 0 from `187.7/16.3` → `112.6/91.4` owned/stolen).
+- **N-B (Task-Level Locality Stealing):** $K=8$ Shadow Index ring buffer (with seqlock generation counters & fences) letting thieves steal locally cheap tasks—slashing Reduction comm cost **−41.3%** and Jacobi **−42.7%**.
+- **N-C (Adaptive Steal Radius):** Per-worker EWMA dynamically scales search reach while folding in distance-ordered stealing (D3).
+- **400-Run Shuffled Probe & Honest Trade-Off:** Across 400 shuffled runs (10 reps), modeled communication cost drops **−16.7% to −44.3%** across all 5 benchmarks, while single-socket HAL-Sim exposes NOVA's real CPU bookkeeping cost (`+1.4%` to `+67.5%`) since host execution has no cross-socket latency feedback. Full details in [`NOVA-Locality-Aware-Scheduler/README.md`](NOVA-Locality-Aware-Scheduler/README.md).
 
 ---
 
 ## 2. TILEPro64 Manycore Simulation (`tilepro64/`)
 
-A standalone C simulator modeling the 64-tile 8×8 2D mesh network:
-- **Latencies:** 10 cycles local L2 access, 38 cycles remote base + 2 cycles per Manhattan mesh hop.
-- **Work Dealing & Stealing:** Algorithm 3 locality routing with 64 KB significance threshold and vicinity-restricted stealing.
-- **Test Suite:** `cd tilepro64 && make test` passes **11 out of 11 validation tests**.
-- **Results (`tilepro64/results/`):**
-  - **Map:** `LA + Coarse` achieves an **80.3% reduction in communication cost** (1.31M vs. 6.67M cycles) and a **39.3% execution speedup** (170.5K vs. 281.1K cycles) over work-stealing.
+An analytical C simulator modeling the 64-tile 8×8 2D mesh network (`10` cycles local L2, `38 + 2·hops` remote):
+- **Validation Suite:** `cd tilepro64 && make test` passes **15 out of 15 validation checks**.
+- **Baseline (`Map`):** `LA + Coarse` cuts modeled communication cost **−80.3%** (`6.67M → 1.31M`) and speeds up makespan **39.3%** (`281.1K → 170.5K`) with **0 steals**.
+- **Hotspots H8–H10b Resolved (`tilepro64/results/`):**
+  - **H8 (Adaptive Migration `AM`):** Break-even chunk re-homing cuts comm cost **−82%** and total work **−12.6%** on corner-trapped reuse traces.
+  - **H9 (Bisection Contention):** 112-link XY arbitration proves priority scheduling cuts queue wait (`1,528 → 48`), while no-contention baselines miss a **5.4×** worst-case bottleneck.
+  - **H10a (2D Stencil Placement):** Coordinate-preserving `2d_block` vs `1d_striped` slashes comm cost **−51.0%**, center-bisection traffic **−93.8% (16×)**, and makespan **2.83×** with 0 steals.
+  - **H10b (14-Hop Corner Drag):** Idle-aged ETA stealing (`dp`) cuts restrictive 2-hop LA makespan by **64%** (`133.2K → 47.7K`) while reducing steal distance vs WS (`5.61` vs `7.11` hops).
 
 ---
 
 ## 3. Academic Presentation & Deliverables
 
-- **Interactive Slide Deck:** Open [docs/presentation.html](docs/presentation.html) in your browser for a full-screen Reveal.js presentation (press **`S`** for presenter notes).
-- **Master Slide Script & Q&A:** View [docs/presentation_deck.md](docs/presentation_deck.md) for word-for-word presenter scripts and examiner Q&A answers.
+- **Print-Ready 7-Slide Presentation PDF:** [`output/HPC_Locality_Scheduling_Presentation.pdf`](output/HPC_Locality_Scheduling_Presentation.pdf) (built from [`docs/presentation_print.html`](docs/presentation_print.html)).
+- **Interactive Slide Deck:** Open [`docs/presentation.html`](docs/presentation.html) in your browser (`S` for speaker notes).
 
 ---
 

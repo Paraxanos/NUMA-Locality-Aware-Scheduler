@@ -2,18 +2,18 @@ CC ?= clang
 CFLAGS ?= -Wall -Wextra -O3 -std=c99 -Isrc
 PYTHON ?= python3
 
-SRC = src/tilepro64.c src/queue.c src/home_cache.c src/latency.c src/data_distribution.c src/task.c src/scheduler.c src/benchmark_map.c src/benchmark_vecmul.c
+SRC = src/tilepro64.c src/queue.c src/home_cache.c src/latency.c src/data_distribution.c src/task.c src/scheduler.c src/benchmark_map.c src/benchmark_vecmul.c src/benchmark_h10a.c
 MAIN_SRC = src/main.c
 TEST_SRC = tests/test_suite.c
 
 all: bin/tilepro64 bin/test_suite
 
 bin/tilepro64: $(SRC) $(MAIN_SRC)
-	@python -c "from pathlib import Path; Path('bin').mkdir(exist_ok=True)"
+	@mkdir -p bin
 	$(CC) $(CFLAGS) $(SRC) $(MAIN_SRC) -o bin/tilepro64
 
 bin/test_suite: $(SRC) $(TEST_SRC)
-	@python -c "from pathlib import Path; Path('bin').mkdir(exist_ok=True)"
+	@mkdir -p bin
 	$(CC) $(CFLAGS) $(SRC) $(TEST_SRC) -o bin/test_suite
 
 test: bin/test_suite

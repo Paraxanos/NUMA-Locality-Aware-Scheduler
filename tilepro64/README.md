@@ -78,6 +78,9 @@ For simultaneous transfers forced onto one route, see [H9_Worst_Case_Report.md](
 ### 5.5 Dynamic stealing for corner drag (H10b)
 The `dp` policy estimates each task's remaining time from compute cycles plus its data-access cost. Idle workers increase their search radius over unsuccessful rounds and rank eligible tasks using estimated completion time, steal cost, remaining batch size, and idle age. The `h10b` benchmark compares dynamic priority with unrestricted WS and fixed two-hop LA on a corner-homed task batch. See [H10b_Dynamic_Stealing_Report.md](H10b_Dynamic_Stealing_Report.md) and [the comparison graph](results/h10b_comparison.png) for results and assumptions.
 
+### 5.6 2D Stencil placement: 1D striping vs 2D blocking (H10a)
+The `h10a` benchmark models an 8×8 2D Jacobi stencil grid (4 sweeps = 256 tasks; 64 KB interior block + four 16 KB N/S/E/W halos) comparing linear `1d_striped` against coordinate-preserving `2d_block` placement. Under `LA`, 2D blocking preserves 1-hop neighbor locality, cutting remote data cost by **51.0%** (`24.74M → 12.12M`), slashing center-bisection link traffic by **93.8% (16×)** (`524K → 32.8K` link-cycles), eliminating all 248 steals, and improving makespan by **2.83×**. See [H10a_2D_Stencil_Report.md](H10a_2D_Stencil_Report.md) and [the H10a comparison graph](results/h10a_comparison.png).
+
 ---
 
 ## 6. Build & Test Instructions
@@ -93,7 +96,7 @@ Generates executables `bin/tilepro64` and `bin/test_suite`.
 ```bash
 make test
 ```
-Verifies all 11 correctness points (64 tiles, 8x8 mesh, queue creation, $D[64]$ accuracy, latency formula, work dealing, local execution, vicinity-bounded stealing, dependency gating, and single execution).
+Verifies all **15** correctness points (64 tiles, 8x8 mesh, queue creation, $D[64]$ accuracy, latency formula, work dealing, local execution, vicinity-bounded stealing, dependency gating, single execution, H8 adaptive migration break-even, H9 link priority arbitration, H10b remaining-time stealing, and H10a 2D-blocked stencil locality).
 
 ---
 

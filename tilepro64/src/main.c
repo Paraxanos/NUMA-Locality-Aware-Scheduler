@@ -32,9 +32,9 @@ static void print_usage(const char* prog) {
     printf("TILEPro64 Manycore Locality-Aware Scheduler Simulator\n");
     printf("Usage: %s [options]\n", prog);
     printf("Options:\n");
-    printf("  --benchmark <map|map_h8|vecmul|h9|h9_worst|h10b> Benchmark to run (default: map)\n");
+    printf("  --benchmark <map|map_h8|vecmul|h9|h9_worst|h10a|h10b> Benchmark to run (default: map)\n");
     printf("  --scheduler <ws|la|am|dp>   Scheduler policy; h9 accepts simple, fifo, priority\n");
-    printf("  --dist <coarse|fine>        Data distribution policy (default: coarse)\n");
+    printf("  --dist <coarse|fine|1d_striped|2d_block> Data distribution policy (default: coarse)\n");
     printf("  --vicinity <1..14>          Vicinity search radius in hops (default: 4)\n");
     printf("  --csv                       Print output in CSV format\n");
     printf("  --all                       Run complete benchmark matrix and emit CSV\n");
@@ -61,6 +61,8 @@ int main(int argc, char* argv[]) {
             const char* d = argv[++i];
             if (strcmp(d, "fine") == 0) dist = DATA_DIST_FINE;
             else if (strcmp(d, "coarse") == 0) dist = DATA_DIST_COARSE;
+            else if (strcmp(d, "1d_striped") == 0) dist = DATA_DIST_1D_STRIPED;
+            else if (strcmp(d, "2d_block") == 0) dist = DATA_DIST_2D_BLOCK;
         } else if (strcmp(argv[i], "--vicinity") == 0 && i + 1 < argc) {
             vicinity = (uint16_t)atoi(argv[++i]);
         } else if (strcmp(argv[i], "--csv") == 0) {
@@ -116,6 +118,14 @@ int main(int argc, char* argv[]) {
         print_csv_row(&h10b_ws);
         print_csv_row(&h10b_la);
         print_csv_row(&h10b_dp);
+        benchmark_result_t h10a_ws_1d = run_benchmark_h10a(SCHED_POLICY_WS, DATA_DIST_1D_STRIPED, 4);
+        benchmark_result_t h10a_ws_2d = run_benchmark_h10a(SCHED_POLICY_WS, DATA_DIST_2D_BLOCK, 4);
+        benchmark_result_t h10a_la_1d = run_benchmark_h10a(SCHED_POLICY_LA, DATA_DIST_1D_STRIPED, 4);
+        benchmark_result_t h10a_la_2d = run_benchmark_h10a(SCHED_POLICY_LA, DATA_DIST_2D_BLOCK, 4);
+        print_csv_row(&h10a_ws_1d);
+        print_csv_row(&h10a_ws_2d);
+        print_csv_row(&h10a_la_1d);
+        print_csv_row(&h10a_la_2d);
         return 0;
     }
 
@@ -134,6 +144,8 @@ int main(int argc, char* argv[]) {
         const char* p = "fifo";
         for (int i = 1; i + 1 < argc; i++) if (strcmp(argv[i], "--scheduler") == 0) p = argv[i + 1];
         res = run_benchmark_h9_worst(p);
+    } else if (strcmp(bench_str, "h10a") == 0) {
+        res = run_benchmark_h10a(sched, dist, vicinity);
     } else if (strcmp(bench_str, "h10b") == 0) {
         const char* p = "dp";
         for (int i = 1; i + 1 < argc; i++) if (strcmp(argv[i], "--scheduler") == 0) p = argv[i + 1];
